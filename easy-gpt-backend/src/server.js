@@ -67,7 +67,6 @@ app.post('/promptStream/text', async (req, res) => {
 				try {
 					const parsed = JSON.parse(message);
 					const content = parsed.choices[0].delta.content;
-					console.log(content);
 					if (content) {
 						res.write(`data: ${content}\n\n`);
 					}

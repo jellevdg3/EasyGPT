@@ -1,86 +1,90 @@
 <script setup>
-import { ref, nextTick, reactive } from 'vue'
+import { ref, nextTick, reactive } from 'vue';
 
-const messages = ref([])
-const userInput = ref('')
-const messageContainer = ref(null)
-
-
+const messages = ref([]);
+const userInput = ref('');
+const messageContainer = ref(null);
 
 const sendMessageStreaming = async () => {
-	if (userInput.value.trim() === '') return
-	const userMessage = { sender: 'user', text: userInput.value }
-	messages.value.push(userMessage)
-	const prompt = userInput.value
-	userInput.value = ''
+	if (userInput.value.trim() === '') return;
+	const userMessage = { sender: 'user', text: userInput.value };
+	messages.value.push(userMessage);
+	const prompt = userInput.value;
+	userInput.value = '';
 
-	const botMessage = reactive({ sender: 'bot', text: '' })
-	messages.value.push(botMessage)
+	const botMessage = reactive({ sender: 'bot', text: '' });
+	messages.value.push(botMessage);
 	nextTick(() => {
-		messageContainer.value.scrollTop = messageContainer.value.scrollHeight
-	})
+		messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
+	});
 
 	try {
 		const response = await fetch('http://localhost:3000/promptStream/text', {
 			method: 'POST',
 			headers: {
-				'Content-Type': 'application/json'
+				'Content-Type': 'application/json',
 			},
-			body: JSON.stringify({ prompt })
-		})
+			body: JSON.stringify({ prompt }),
+		});
 
 		if (!response.body) {
-			throw new Error('ReadableStream not supported in this browser.')
+			throw new Error('ReadableStream not supported in this browser.');
 		}
 
-		const reader = response.body.getReader()
-		const decoder = new TextDecoder('utf-8')
-		let buffer = ''
+		const reader = response.body.getReader();
+		const decoder = new TextDecoder('utf-8');
+		let buffer = '';
 
 		while (true) {
-			const { value, done } = await reader.read()
-			if (done) break
-			buffer += decoder.decode(value, { stream: true })
-			let lines = buffer.split('\n\n')
-			buffer = lines.pop()
+			const { value, done } = await reader.read();
+			if (done) break;
+			buffer += decoder.decode(value, { stream: true });
+			let lines = buffer.split('\n\n');
+			buffer = lines.pop();
 			for (const line of lines) {
-				const trimmedLine = line.trim()
+				const trimmedLine = line.trim();
 
-				let message = ''
+				let message = '';
 				if (trimmedLine.startsWith('data: ')) {
-					message = trimmedLine.substring(6)
+					message = trimmedLine.substring(6);
 				}
 
 				if (message === '[DONE]') {
-					return
+					return;
 				}
 
-				console.log(message)
-				botMessage.text += message
+				console.log(message);
+				botMessage.text += message;
 				nextTick(() => {
-					messageContainer.value.scrollTop = messageContainer.value.scrollHeight
-				})
+					messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
+				});
 			}
 		}
 	} catch (error) {
-		botMessage.text = 'Error: ' + (error.message || 'Unknown error')
+		botMessage.text = 'Error: ' + (error.message || 'Unknown error');
 		nextTick(() => {
-			messageContainer.value.scrollTop = messageContainer.value.scrollHeight
-		})
+			messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
+		});
 	}
-}
+};
 
+const handleKeyup = (event) => {
+	if (event.key === 'Enter' && !event.shiftKey) {
+		event.preventDefault();
+		sendMessageStreaming();
+	}
+};
 </script>
 
 <template>
 	<div id="app">
 		<div id="message-container" class="message-container" ref="messageContainer">
 			<div v-for="(msg, index) in messages" :key="index" :class="['message', msg.sender]">
-				{{ msg.text }}
+				<span class="message-text">{{ msg.text }}</span>
 			</div>
 		</div>
 		<div class="input-container">
-			<input v-model="userInput" @keyup.enter="sendMessageStreaming" placeholder="Type a message..." />
+			<textarea v-model="userInput" @keyup="handleKeyup" placeholder="Type a message..." rows="3"></textarea>
 			<button @click="sendMessageStreaming">Send</button>
 		</div>
 	</div>
@@ -120,6 +124,10 @@ const sendMessageStreaming = async () => {
 	word-wrap: break-word;
 }
 
+.message-text {
+	white-space: pre-wrap;
+}
+
 .user {
 	align-self: flex-end;
 	background-color: var(--user-bg);
@@ -141,13 +149,14 @@ const sendMessageStreaming = async () => {
 	box-sizing: border-box;
 }
 
-input {
+textarea {
 	flex: 1;
 	padding: 0.5em;
 	border: 1px solid var(--input-border);
 	border-radius: 4px;
 	background-color: var(--input-color);
 	color: var(--input-text);
+	resize: none;
 }
 
 button {
