@@ -119,7 +119,7 @@ const sendMessageStreaming = async () => {
 const handleKeyup = (event) => {
 	if (event.key === 'Enter' && !event.shiftKey) {
 		event.preventDefault();
-		sendMessage();
+		sendMessageStreaming();
 	}
 };
 </script>
@@ -133,7 +133,7 @@ const handleKeyup = (event) => {
 		</div>
 		<div class="input-container">
 			<textarea v-model="userInput" @keyup="handleKeyup" placeholder="Type a message..." rows="3"></textarea>
-			<button @click="sendMessage">Send</button>
+			<button @click="sendMessageStreaming">Send</button>
 		</div>
 	</div>
 </template>
