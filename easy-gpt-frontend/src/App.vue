@@ -1,36 +1,87 @@
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, reactive } from 'vue'
 
 const messages = ref([])
 const userInput = ref('')
+const messageContainer = ref(null)
 
-const sendMessage = () => {
+
+
+const sendMessageStreaming = async () => {
 	if (userInput.value.trim() === '') return
-	messages.value.push({ sender: 'user', text: userInput.value })
+	const userMessage = { sender: 'user', text: userInput.value }
+	messages.value.push(userMessage)
+	const prompt = userInput.value
 	userInput.value = ''
+
+	const botMessage = reactive({ sender: 'bot', text: '' })
+	messages.value.push(botMessage)
 	nextTick(() => {
-		window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+		messageContainer.value.scrollTop = messageContainer.value.scrollHeight
 	})
-	const reply = { sender: 'bot', text: 'This is a placeholder response.' }
-	setTimeout(() => {
-		messages.value.push(reply)
-		nextTick(() => {
-			window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+
+	try {
+		const response = await fetch('http://localhost:3000/promptStream/text', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ prompt })
 		})
-	}, 500)
+
+		if (!response.body) {
+			throw new Error('ReadableStream not supported in this browser.')
+		}
+
+		const reader = response.body.getReader()
+		const decoder = new TextDecoder('utf-8')
+		let buffer = ''
+
+		while (true) {
+			const { value, done } = await reader.read()
+			if (done) break
+			buffer += decoder.decode(value, { stream: true })
+			let lines = buffer.split('\n\n')
+			buffer = lines.pop()
+			for (const line of lines) {
+				const trimmedLine = line.trim()
+
+				let message = ''
+				if (trimmedLine.startsWith('data: ')) {
+					message = trimmedLine.substring(6)
+				}
+
+				if (message === '[DONE]') {
+					return
+				}
+
+				console.log(message)
+				botMessage.text += message
+				nextTick(() => {
+					messageContainer.value.scrollTop = messageContainer.value.scrollHeight
+				})
+			}
+		}
+	} catch (error) {
+		botMessage.text = 'Error: ' + (error.message || 'Unknown error')
+		nextTick(() => {
+			messageContainer.value.scrollTop = messageContainer.value.scrollHeight
+		})
+	}
 }
+
 </script>
 
 <template>
 	<div id="app">
-		<div id="message-container" class="message-container">
+		<div id="message-container" class="message-container" ref="messageContainer">
 			<div v-for="(msg, index) in messages" :key="index" :class="['message', msg.sender]">
 				{{ msg.text }}
 			</div>
 		</div>
 		<div class="input-container">
-			<input v-model="userInput" @keyup.enter="sendMessage" placeholder="Type a message..." />
-			<button @click="sendMessage">Send</button>
+			<input v-model="userInput" @keyup.enter="sendMessageStreaming" placeholder="Type a message..." />
+			<button @click="sendMessageStreaming">Send</button>
 		</div>
 	</div>
 </template>
@@ -41,7 +92,7 @@ const sendMessage = () => {
 	flex-direction: column;
 	background-color: var(--background-color);
 	color: var(--text-color);
-	width: 100%;
+	width: 100vw;
 	max-width: 1024px;
 	margin: 0 auto;
 	height: 100vh;
@@ -82,13 +133,8 @@ const sendMessage = () => {
 }
 
 .input-container {
-	position: fixed;
-	bottom: 0;
-	left: 50%;
-	transform: translateX(-50%);
 	display: flex;
 	width: 100%;
-	max-width: 1024px;
 	padding: 1em;
 	background-color: var(--input-bg);
 	border-top: 1px solid var(--border-color);
