@@ -1,9 +1,40 @@
 <script setup>
 import { ref, nextTick, reactive } from 'vue';
+import axios from 'axios';
 
 const messages = ref([]);
 const userInput = ref('');
 const messageContainer = ref(null);
+const DELIMITER = '\u001e';
+
+const sendMessage = async () => {
+	if (userInput.value.trim() === '') return
+	const userMessage = { sender: 'user', text: userInput.value }
+	messages.value.push(userMessage)
+	const prompt = userInput.value
+	userInput.value = ''
+
+	const botMessage = reactive({ sender: 'bot', text: '' });
+	messages.value.push(botMessage);
+
+	nextTick(() => {
+		messageContainer.value.scrollTop = messageContainer.value.scrollHeight
+	})
+	try {
+		const response = await axios.post('http://localhost:3000/prompt/text', { prompt });
+		const botText = response.data.choices[0].message.content;
+		console.log(botText);
+		botMessage.text = botText;
+		nextTick(() => {
+			messageContainer.value.scrollTop = messageContainer.value.scrollHeight
+		})
+	} catch (error) {
+		botMessage.text = 'Error: ' + (error.message || 'Unknown error');
+		nextTick(() => {
+			messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
+		});
+	}
+};
 
 const sendMessageStreaming = async () => {
 	if (userInput.value.trim() === '') return;
@@ -27,6 +58,26 @@ const sendMessageStreaming = async () => {
 			body: JSON.stringify({ prompt }),
 		});
 
+		if (!response.ok) {
+			let errorText = `HTTP Error ${response.status}: ${response.statusText}`;
+			try {
+				const contentType = response.headers.get('content-type');
+				if (contentType && contentType.includes('application/json')) {
+					const errorData = await response.json();
+					errorText = errorData.message || errorText;
+				} else {
+					const text = await response.text();
+					errorText = text || errorText;
+				}
+			} catch (e) {
+			}
+			botMessage.text = `Error: ${errorText}`;
+			nextTick(() => {
+				messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
+			});
+			return;
+		}
+
 		if (!response.body) {
 			throw new Error('ReadableStream not supported in this browser.');
 		}
@@ -39,21 +90,18 @@ const sendMessageStreaming = async () => {
 			const { value, done } = await reader.read();
 			if (done) break;
 			buffer += decoder.decode(value, { stream: true });
-			let lines = buffer.split('\n\n');
-			buffer = lines.pop();
-			for (const line of lines) {
-				const trimmedLine = line.trim();
-
-				let message = '';
-				if (trimmedLine.startsWith('data: ')) {
-					message = trimmedLine.substring(6);
+			let parts = buffer.split(DELIMITER);
+			buffer = parts.pop();
+			for (const part of parts) {
+				let message = part;
+				if (message.startsWith('data: ')) {
+					message = message.substring(6);
 				}
 
 				if (message === '[DONE]') {
 					return;
 				}
 
-				console.log(message);
 				botMessage.text += message;
 				nextTick(() => {
 					messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
@@ -71,7 +119,7 @@ const sendMessageStreaming = async () => {
 const handleKeyup = (event) => {
 	if (event.key === 'Enter' && !event.shiftKey) {
 		event.preventDefault();
-		sendMessageStreaming();
+		sendMessage();
 	}
 };
 </script>
@@ -85,7 +133,7 @@ const handleKeyup = (event) => {
 		</div>
 		<div class="input-container">
 			<textarea v-model="userInput" @keyup="handleKeyup" placeholder="Type a message..." rows="3"></textarea>
-			<button @click="sendMessageStreaming">Send</button>
+			<button @click="sendMessage">Send</button>
 		</div>
 	</div>
 </template>
@@ -97,11 +145,16 @@ const handleKeyup = (event) => {
 	background-color: var(--background-color);
 	color: var(--text-color);
 	width: 100vw;
-	max-width: 1024px;
 	margin: 0 auto;
 	height: 100vh;
 	overflow: hidden;
 	position: relative;
+}
+
+@media (min-width: 768px) {
+	#app {
+		max-width: 80vw;
+	}
 }
 
 .message-container {

@@ -4,6 +4,7 @@ const cors = require('cors');
 const axios = require('axios');
 
 const app = express();
+const DELIMITER = '\u001e';
 
 app.use(express.json());
 app.use(cors());
@@ -28,6 +29,7 @@ app.post('/prompt/text', async (req, res) => {
 		res.json(response.data);
 	} catch (error) {
 		res.status(500).json({ error: error.message });
+		console.log(error);
 	}
 });
 
@@ -55,24 +57,35 @@ app.post('/promptStream/text', async (req, res) => {
 		res.setHeader('Cache-Control', 'no-cache');
 		res.setHeader('Connection', 'keep-alive');
 
+		let buffer = '';
+
 		response.data.on('data', (data) => {
-			const lines = data.toString().split('\n').filter(line => line.trim() !== '');
-			for (const line of lines) {
-				const message = line.replace(/^data: /, '');
-				if (message === '[DONE]') {
-					res.write('data: [DONE]\n\n');
-					res.end();
-					return;
-				}
-				try {
-					const parsed = JSON.parse(message);
-					const content = parsed.choices[0].delta.content;
-					if (content) {
-						res.write(`data: ${content}\n\n`);
+			buffer += data.toString();
+			let boundary = buffer.indexOf('\n\n');
+			while (boundary !== -1) {
+				const chunk = buffer.slice(0, boundary);
+				buffer = buffer.slice(boundary + 2);
+				const lines = chunk.split('\n').filter(line => line.trim() !== '');
+				for (const line of lines) {
+					if (line.startsWith('data: ')) {
+						const message = line.replace(/^data: /, '');
+						if (message === '[DONE]') {
+							res.write(`data: [DONE]${DELIMITER}`);
+							res.end();
+							return;
+						}
+						try {
+							const parsed = JSON.parse(message);
+							const content = parsed.choices[0].delta.content;
+							if (content) {
+								res.write(`data: ${content}${DELIMITER}`);
+							}
+						} catch (error) {
+							console.error('Error parsing message', error);
+						}
 					}
-				} catch (error) {
-					console.error('Error parsing message', error);
 				}
+				boundary = buffer.indexOf('\n\n');
 			}
 		});
 
