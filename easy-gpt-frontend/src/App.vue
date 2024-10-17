@@ -1,6 +1,5 @@
 <script setup>
-import { ref, nextTick, reactive } from 'vue';
-import { marked } from 'marked';
+import { ref, reactive } from 'vue';
 import { sendMessageStreaming } from './services/PromptService';
 import MessageContainer from './components/MessageContainer.vue';
 import InputContainer from './components/InputContainer.vue';
@@ -35,14 +34,11 @@ const initiateSendMessageStreaming = async () => {
 	}
 };
 
-const formatMessage = (text) => {
-	return marked.parse(text);
-};
 </script>
 
 <template>
 	<div id="app">
-		<MessageContainer :messages="messages" :formatMessage="formatMessage" />
+		<MessageContainer :messages="messages" />
 		<InputContainer v-model="userInput" @send="initiateSendMessageStreaming" />
 	</div>
 </template>

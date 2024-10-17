@@ -1,22 +1,30 @@
 <template>
 	<div :class="['message', message.sender]">
-		<span v-if="!(message.sender === 'bot' && !message.text)" class="message-text"
-			v-html="formatMessage(message.text)"></span>
+		<div v-if="hasMessage()">
+			<span class="message-text" v-html="formatMessage(message.text)"></span>
+			<v-btn icon tile size="x-small" @click="copyMessage" class="menu-button elevation-0"
+				style="background-color: transparent;">
+				<v-icon color="white">mdi-content-copy</v-icon>
+			</v-btn>
+		</div>
 		<div v-else class="typing">
 			<span></span><span></span><span></span>
 		</div>
-		<v-btn icon tile size="x-small" @click="copyMessage" class="menu-button elevation-0"
-			style="background-color: transparent;">
-			<v-icon color="white">mdi-content-copy</v-icon>
-		</v-btn>
 	</div>
 </template>
 
 <script setup>
+import { marked } from 'marked';
+
 const props = defineProps({
-	message: Object,
-	formatMessage: Function
+	message: Object
 });
+
+const formatMessage = (text) => {
+	return marked.parse(text);
+};
+
+const hasMessage = () => props.message.text && props.message.text !== '';
 
 const copyMessage = () => {
 	navigator.clipboard.writeText(props.message.text);
@@ -61,7 +69,7 @@ const copyMessage = () => {
 .typing span {
 	width: 8px;
 	height: 8px;
-	margin: 0 2px;
+	margin: 2px 2px;
 	background-color: var(--message-text);
 	border-radius: 50%;
 	animation: typing 1s infinite;

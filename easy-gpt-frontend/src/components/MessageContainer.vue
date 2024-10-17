@@ -3,8 +3,7 @@ import { ref, nextTick, watch } from 'vue';
 import MessageItem from './MessageItem.vue';
 
 const props = defineProps({
-	messages: Array,
-	formatMessage: Function
+	messages: Array
 });
 
 const messageContainer = ref(null);
@@ -21,7 +20,7 @@ watch(props.messages, () => {
 <template>
 	<div id="message-container" class="message-container" ref="messageContainer">
 		<div class="message-item-wrapper" v-for="(msg, index) in messages" :key="index">
-			<MessageItem :message="msg" :formatMessage="formatMessage" />
+			<MessageItem :message="msg" />
 		</div>
 	</div>
 </template>

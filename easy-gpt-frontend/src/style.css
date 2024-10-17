@@ -67,6 +67,10 @@ button {
 	transition: border-color 0.25s, background-color 0.25s;
 }
 
+*:focus {
+    outline: 0 !important;
+}
+
 button:hover {
 	border-color: #1e90ff;
 	background-color: #005a9e;

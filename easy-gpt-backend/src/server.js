@@ -29,7 +29,7 @@ app.post('/promptStream/text', async (req, res) => {
 		return res.status(400).json({ error: 'Prompt is required' });
 	}
 	try {
-		await service.promptStreamText(prompt, res);
+		await service.promptStreamText(res, prompt);
 	} catch (error) {
 		res.status(500).json({ error: error.message });
 	}

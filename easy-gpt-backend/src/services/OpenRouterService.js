@@ -1,13 +1,13 @@
 const axios = require('axios');
-const ServiceInterface = require('./ServiceInterface');
+const AIServiceInterface = require('./AIServiceInterface');
 
-class OpenRouterService extends ServiceInterface {
-	async promptText(prompt) {
+class OpenRouterService extends AIServiceInterface {
+	async promptText(prompt, model = 'gpt-4o-mini', maxTokens = 8192, temperature = 0.7) {
 		const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-			model: 'o1-mini',
+			model: model,
 			messages: [{ role: 'user', content: prompt }],
-			max_tokens: 8192,
-			temperature: 0.7,
+			max_tokens: maxTokens,
+			temperature: temperature,
 		}, {
 			headers: {
 				'Content-Type': 'application/json',
@@ -18,13 +18,13 @@ class OpenRouterService extends ServiceInterface {
 		return response.data;
 	}
 
-	async promptStreamText(prompt, res) {
+	async promptStreamText(res, prompt, model = 'gpt-4o-mini', maxTokens = 8192, temperature = 0.7) {
 		const DELIMITER = '\u001e';
 		const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-			model: 'o1-mini',
+			model: model, // 'o1-mini',
 			messages: [{ role: 'user', content: prompt }],
-			max_tokens: 8192,
-			temperature: 0.7,
+			max_tokens: maxTokens,
+			temperature: temperature,
 			stream: true
 		}, {
 			headers: {
@@ -79,6 +79,6 @@ class OpenRouterService extends ServiceInterface {
 			res.status(500).json({ error: error.message });
 		});
 	}
-}
+};
 
 module.exports = OpenRouterService;
