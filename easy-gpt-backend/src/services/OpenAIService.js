@@ -2,12 +2,12 @@ const axios = require('axios');
 const AIServiceInterface = require('./AIServiceInterface');
 
 class OpenAIService extends AIServiceInterface {
-	async promptText(prompt) {
+	async promptText(prompt, model = 'gpt-4o-mini', maxTokens = 8192, temperature = 0.7) {
 		const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-			model: 'gpt-4o-mini',
+			model: model,
 			messages: [{ role: 'user', content: prompt }],
-			max_tokens: 8192,
-			temperature: 0.7,
+			max_tokens: maxTokens,
+			temperature: temperature,
 		}, {
 			headers: {
 				'Content-Type': 'application/json',
@@ -17,13 +17,13 @@ class OpenAIService extends AIServiceInterface {
 		return response.data;
 	}
 
-	async promptStreamText(res, prompt) {
+	async promptStreamText(res, prompt, model = 'gpt-4o-mini', maxTokens = 8192, temperature = 0.7) {
 		const DELIMITER = '\u001e';
 		const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-			model: 'gpt-4o-mini',
+			model: model,
 			messages: [{ role: 'user', content: prompt }],
-			max_tokens: 8192,
-			temperature: 0.7,
+			max_tokens: maxTokens,
+			temperature: temperature,
 			stream: true
 		}, {
 			headers: {

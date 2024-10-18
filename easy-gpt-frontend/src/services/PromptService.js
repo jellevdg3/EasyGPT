@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { ref, nextTick, reactive } from 'vue';
+import notificationSound from '../assets/system-notification-199277.mp3';
 
 const DELIMITER = '\u001e';
 
@@ -24,11 +26,17 @@ export const sendSimpleMessage = async () => {
 	try {
 		const botText = await sendMessage(prompt);
 		botMessage.text = botText;
+		const audio = new Audio(notificationSound);
+		audio.volume = 0.5;
+		audio.play();
 		nextTick(() => {
 			messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
 		});
 	} catch (error) {
 		botMessage.text = 'Error: ' + (error.message || 'Unknown error');
+		const audio = new Audio(notificationSound);
+		audio.volume = 0.5;
+		audio.play();
 		nextTick(() => {
 			messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
 		});
@@ -45,7 +53,7 @@ export const sendMessageStreaming = async (prompt, onMessage) => {
 	});
 
 	if (!response.ok) {
-		let errorText = `HTTP Error ${response.status}: ${response.statusText}`;
+		let errorText = `HTTP Error ${response.status}: ${response.statusText} `;
 		try {
 			const contentType = response.headers.get('content-type');
 			if (contentType && contentType.includes('application/json')) {
@@ -80,6 +88,9 @@ export const sendMessageStreaming = async (prompt, onMessage) => {
 			}
 
 			if (message === '[DONE]') {
+				const audio = new Audio(notificationSound);
+				audio.volume = 0.5;
+				audio.play();
 				return;
 			}
 
