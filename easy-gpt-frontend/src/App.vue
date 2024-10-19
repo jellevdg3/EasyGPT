@@ -1,32 +1,38 @@
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, watch } from 'vue';
 import { sendMessageStreaming } from './services/PromptService';
 import MessageContainer from './components/MessageContainer.vue';
 import InputContainer from './components/InputContainer.vue';
 
-const messages = ref([]);
-const userInput = ref('');
-
 const models = reactive({
-  'gpt-4o': false,
-  'gpt-4o-mini': false,
-  'o1-mini': false,
-  'claude-3.5': false,
+  'openai/gpt-4o': false,
+  'openai/gpt-4o-mini': true,
+  'openai/o1-mini': false,
+  'anthropic/claude-3.5-sonnet': false,
 });
 
-const toggleModel = (model) => {
-  models[model] = !models[model];
+const messages = reactive({});
+Object.keys(models).forEach(model => {
+  messages[model] = [];
+});
+
+const currentModel = ref('openai/gpt-4o-mini');
+
+const switchConversation = (model) => {
+  currentModel.value = model;
 };
 
+const userInput = ref('');
+
 const initiateSendMessageStreaming = async () => {
-  if (userInput.value.trim() === '') return;
+  if (!currentModel.value || userInput.value.trim() === '') return;
   const prompt = userInput.value;
   const userMessage = { sender: 'user', text: prompt };
-  messages.value.push(userMessage);
+  messages[currentModel.value].push(userMessage);
   userInput.value = '';
 
   const botMessage = reactive({ sender: 'bot', text: '' });
-  messages.value.push(botMessage);
+  messages[currentModel.value].push(botMessage);
 
   try {
     await sendMessageStreaming(prompt, (message) => {
@@ -44,22 +50,38 @@ const initiateSendMessageStreaming = async () => {
     botMessage.text = 'Error: ' + (error.message || 'Unknown error');
   }
 };
+
+watch(models, (newModels) => {
+  if (!newModels[currentModel.value]) {
+    const activeModels = Object.keys(newModels).filter(m => newModels[m]);
+    currentModel.value = activeModels.length > 0 ? activeModels[0] : null;
+  }
+}, { deep: true });
 </script>
 
 <template>
   <div id="app">
     <div class="model-buttons">
-      <button
+      <div
         v-for="model in Object.keys(models)"
         :key="model"
-        :class="{ active: models[model] }"
-        @click="toggleModel(model)"
+        class="model-button-wrapper"
       >
-        <input type="checkbox" v-model="models[model]" />
-        {{ model }}
-      </button>
+        <button
+          @click="switchConversation(model)"
+          :class="{ disabled: !models[model], active: currentModel === model }"
+          class="model-button"
+        >
+          {{ model }}
+        </button>
+        <input
+          type="checkbox"
+          v-model="models[model]"
+          class="model-toggle"
+        />
+      </div>
     </div>
-    <MessageContainer :messages="messages" />
+    <MessageContainer :messages="currentModel ? messages[currentModel] : []" />
     <InputContainer v-model="userInput" @send="initiateSendMessageStreaming" />
   </div>
 </template>
@@ -85,22 +107,34 @@ const initiateSendMessageStreaming = async () => {
   justify-content: center;
 }
 
-.model-buttons button {
+.model-button-wrapper {
   display: flex;
   align-items: center;
+}
+
+.model-button {
   padding: 5px 10px;
   background-color: var(--button-color);
   border: none;
   border-radius: 4px;
   cursor: pointer;
-}
-
-.model-buttons button.active {
-  background-color: var(--button-active-color);
-}
-
-.model-buttons input {
+  color: darkgray;
   margin-right: 5px;
+  transition: background-color 0.3s, color 0.3s, text-decoration 0.3s;
+}
+
+.model-button.disabled {
+  color: darkgray;
+  text-decoration: line-through;
+}
+
+.model-button.active {
+  background-color: var(--active-button-color);
+  color: var(--active-text-color);
+}
+
+.model-toggle {
+  cursor: pointer;
 }
 
 @media (min-width: 768px) {
