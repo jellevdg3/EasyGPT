@@ -25,17 +25,19 @@ const switchConversation = (model) => {
 const userInput = ref('');
 
 const initiateSendMessageStreaming = async () => {
-  if (!currentModel.value || userInput.value.trim() === '') return;
+  if (userInput.value.trim() === '') return;
   const prompt = userInput.value;
   const userMessage = { sender: 'user', text: prompt };
-  messages[currentModel.value].push(userMessage);
-  userInput.value = '';
+  const activeModels = Object.keys(models).filter(model => models[model]);
 
-  const botMessage = reactive({ sender: 'bot', text: '' });
-  messages[currentModel.value].push(botMessage);
+  activeModels.forEach(model => {
+    messages[model].push({ ...userMessage });
+    userInput.value = '';
 
-  try {
-    await sendMessageStreaming(prompt, (message) => {
+    const botMessage = reactive({ sender: 'bot', text: '' });
+    messages[model].push(botMessage);
+
+    sendMessageStreaming(prompt, model, (message) => {
       if (message.startsWith('data: ')) {
         message = message.substring(6);
       }
@@ -45,10 +47,10 @@ const initiateSendMessageStreaming = async () => {
       }
 
       botMessage.text += message;
+    }).catch(error => {
+      botMessage.text = 'Error: ' + (error.message || 'Unknown error');
     });
-  } catch (error) {
-    botMessage.text = 'Error: ' + (error.message || 'Unknown error');
-  }
+  });
 };
 
 watch(models, (newModels) => {

@@ -11,11 +11,15 @@ app.use(cors());
 
 app.post('/prompt/text', async (req, res) => {
 	const prompt = req.body.prompt;
+	const model = req.body.model;
 	if (!prompt) {
 		return res.status(400).json({ error: 'Prompt is required' });
 	}
+	if (!model) {
+		return res.status(400).json({ error: 'Model is required' });
+	}
 	try {
-		const data = await service.promptText(prompt);
+		const data = await service.promptText(prompt, model);
 		res.json(data);
 	} catch (error) {
 		res.status(500).json({ error: error.message });
@@ -25,11 +29,15 @@ app.post('/prompt/text', async (req, res) => {
 
 app.post('/promptStream/text', async (req, res) => {
 	const prompt = req.body.prompt;
+	const model = req.body.model;
 	if (!prompt) {
 		return res.status(400).json({ error: 'Prompt is required' });
 	}
+	if (!model) {
+		return res.status(400).json({ error: 'Model is required' });
+	}
 	try {
-		await service.promptStreamText(res, prompt);
+		await service.promptStreamText(res, prompt, model);
 	} catch (error) {
 		res.status(500).json({ error: error.message });
 	}

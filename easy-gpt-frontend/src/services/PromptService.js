@@ -43,13 +43,13 @@ export const sendSimpleMessage = async () => {
 	}
 };
 
-export const sendMessageStreaming = async (prompt, onMessage) => {
+export const sendMessageStreaming = async (prompt, model, onMessage) => {
 	const response = await fetch('http://localhost:3000/promptStream/text', {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 		},
-		body: JSON.stringify({ prompt }),
+		body: JSON.stringify({ prompt, model }),
 	});
 
 	if (!response.ok) {

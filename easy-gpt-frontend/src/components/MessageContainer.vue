@@ -8,13 +8,13 @@ const props = defineProps({
 
 const messageContainer = ref(null);
 
-watch(props.messages, () => {
+watch(() => props.messages, () => {
 	nextTick(() => {
 		if (messageContainer.value) {
 			messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
 		}
 	});
-});
+}, { deep: true });
 </script>
 
 <template>
