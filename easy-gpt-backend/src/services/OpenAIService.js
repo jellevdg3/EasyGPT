@@ -77,6 +77,15 @@ class OpenAIService extends AIServiceInterface {
 			res.status(500).json({ error: error.message });
 		});
 	}
+
+	async listModels() {
+		const response = await axios.get('https://api.openai.com/v1/models', {
+			headers: {
+				'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+			}
+		});
+		return response.data;
+	}
 };
 
 module.exports = OpenAIService;

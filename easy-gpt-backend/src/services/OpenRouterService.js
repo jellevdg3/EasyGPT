@@ -21,7 +21,7 @@ class OpenRouterService extends AIServiceInterface {
 	async promptStreamText(res, prompt, model = 'gpt-4o-mini', maxTokens = 8192, temperature = 0.7) {
 		const DELIMITER = '\u001e';
 		const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-			model: model, // 'o1-mini',
+			model: model,
 			messages: [{ role: 'user', content: prompt }],
 			max_tokens: maxTokens,
 			temperature: temperature,
@@ -78,6 +78,16 @@ class OpenRouterService extends AIServiceInterface {
 		response.data.on('error', (error) => {
 			res.status(500).json({ error: error.message });
 		});
+	}
+
+	async listModels() {
+		const response = await axios.get('https://openrouter.ai/api/v1/models', {
+			headers: {
+				'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+				'X-App-Name': 'Easy GPT'
+			}
+		});
+		return response.data;
 	}
 };
 

@@ -43,6 +43,15 @@ app.post('/promptStream/text', async (req, res) => {
 	}
 });
 
+app.get('/model/list', async (req, res) => {
+	try {
+		const data = await service.listModels();
+		res.json(data);
+	} catch (error) {
+		res.status(500).json({ error: error.message });
+	}
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
 	console.log(`Azure TTS server is running on port ${PORT}`);
