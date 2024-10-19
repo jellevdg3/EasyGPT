@@ -19,6 +19,13 @@ const activeModels = reactive({
   'anthropic/claude-3.5-sonnet': false
 });
 
+const loadingModels = reactive({
+  'openai/gpt-4o': false,
+  'openai/gpt-4o-mini': false,
+  'openai/o1-mini': false,
+  'anthropic/claude-3.5-sonnet': false
+});
+
 const currentModel = ref('openai/gpt-4o-mini');
 
 const userInput = ref('');
@@ -38,9 +45,10 @@ const initiateSendMessageStreaming = async () => {
       messages[model] = [];
     }
     messages[model].push({ ...userMessage });
-    
+
     const botMessage = reactive({ sender: 'bot', text: '' });
     messages[model].push(botMessage);
+    loadingModels[model] = true;
 
     sendMessageStreaming(prompt, model, (message) => {
       if (message.startsWith('data: ')) {
@@ -48,12 +56,14 @@ const initiateSendMessageStreaming = async () => {
       }
 
       if (message === '[DONE]') {
+        loadingModels[model] = false;
         return;
       }
 
       botMessage.text += message;
     }).catch(error => {
       botMessage.text = 'Error: ' + (error.message || 'Unknown error');
+      loadingModels[model] = false;
     });
   });
 
@@ -66,6 +76,7 @@ const initiateSendMessageStreaming = async () => {
     <ModelSelector 
       v-model="currentModel" 
       :active-models="activeModels" 
+      :loading-models="loadingModels"
       @update:activeModels="updateActiveModel" 
     />
     <MessageContainer :messages="currentModel ? messages[currentModel] : []" />

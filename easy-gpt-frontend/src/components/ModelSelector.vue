@@ -3,7 +3,8 @@ import { defineProps, defineEmits } from 'vue';
 
 const props = defineProps({
   modelValue: String,
-  activeModels: Object
+  activeModels: Object,
+  loadingModels: Object
 });
 
 const emit = defineEmits(['update:modelValue', 'update:activeModels']);
@@ -31,12 +32,19 @@ const switchConversation = (model) => {
       >
         {{ model }}
       </button>
-      <input
-        type="checkbox"
-        :checked="activeModels[model]"
-        @change="toggleModel(model)"
-        class="model-toggle"
-      />
+      <div class="toggle-container">
+        <template v-if="loadingModels[model]">
+          <div class="spinner"></div>
+        </template>
+        <template v-else>
+          <input
+            type="checkbox"
+            :checked="activeModels[model]"
+            @change="toggleModel(model)"
+            class="model-toggle"
+          />
+        </template>
+      </div>
     </div>
   </div>
 </template>
@@ -78,5 +86,24 @@ const switchConversation = (model) => {
 
 .model-toggle {
   cursor: pointer;
+}
+
+.toggle-container {
+  width: 20px;
+  height: 20px;
+  position: relative;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--spinner-color, #ccc);
+  border-top: 2px solid var(--spinner-active-color, #333);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
