@@ -1,5 +1,55 @@
+<template>
+	<div class="model-buttons">
+		<div v-for="model in Object.keys(activeModels)" :key="model" class="model-button-wrapper">
+			<div class="model-button-row">
+				<button @click="switchConversation(model)"
+					:class="{ disabled: !activeModels[model], active: modelValue === model }" class="model-button"
+					:data-model="model">
+					{{ modelMap[model] || model }}
+				</button>
+				<div class="toggle-container">
+					<template v-if="loadingModels[model]">
+						<div class="spinner"></div>
+					</template>
+					<template v-else>
+						<input type="checkbox" :checked="activeModels[model]" @change="toggleModel(model)"
+							class="model-toggle" />
+					</template>
+				</div>
+			</div>
+		</div>
+		<button class="add-button" @click="openDialog">
+			<i class="mdi mdi-plus"></i>
+		</button>
+		<div class="active-line" :class="{ 'transition-enabled': isTransitionEnabled }"
+			:style="{ left: `${activeLinePosition}px`, width: `${activeLineWidth}px`, top: `${activeLineTop}px` }"></div>
+		<div v-if="showDialog" class="dialog-overlay" @click.self="closeDialog">
+			<div class="dialog">
+				<h3>Select a Model</h3>
+				<div v-if="dialogLoading" class="dialog-spinner"></div>
+				<ul v-else>
+					<li v-for="model in availableModels" :key="model.id" @click="addModel(model)" class="dialog-item">
+						<h4>{{ model.displayName || model.id }}</h4>
+						<p>{{ model.description }}</p>
+						<p><strong>Context Length:</strong> {{ model.context_length }}</p>
+						<p><strong>Pricing:</strong></p>
+						<ul>
+							<li>Prompt: {{ model.pricing.prompt }}</li>
+							<li>Completion: {{ model.pricing.completion }}</li>
+							<li>Image: {{ model.pricing.image }}</li>
+							<li>Request: {{ model.pricing.request }}</li>
+						</ul>
+						<button class="select-button">Select</button>
+					</li>
+				</ul>
+				<button class="close-button" @click="closeDialog">Close</button>
+			</div>
+		</div>
+	</div>
+</template>
+
 <script setup>
-import { defineProps, defineEmits, ref, watch, nextTick, onMounted } from 'vue';
+import { defineProps, defineEmits, ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { getModels } from '../services/ModelService';
 
 const props = defineProps({
@@ -47,6 +97,7 @@ const addModel = (model) => {
 
 const activeLinePosition = ref(0);
 const activeLineWidth = ref(0);
+const activeLineTop = ref(0);
 const isTransitionEnabled = ref(false);
 
 const updateActiveLine = async (animate = true) => {
@@ -59,12 +110,22 @@ const updateActiveLine = async (animate = true) => {
 
 		activeLinePosition.value = modelButton.offsetLeft;
 		activeLineWidth.value = modelButton.offsetWidth;
+		activeLineTop.value = modelButton.offsetTop + modelButton.offsetHeight - 2;
 	}
 };
 
 onMounted(async () => {
 	await updateActiveLine(false);
+	window.addEventListener('resize', onResize);
 });
+
+onUnmounted(() => {
+	window.removeEventListener('resize', onResize);
+});
+
+const onResize = () => {
+	updateActiveLine(false);
+};
 
 watch(
 	() => props.modelValue,
@@ -77,59 +138,10 @@ const models = getModels();
 const modelMap = Object.fromEntries(models.map(model => [model.id, model.displayName]));
 </script>
 
-<template>
-	<div class="model-buttons">
-		<div v-for="model in Object.keys(activeModels)" :key="model" class="model-button-wrapper">
-			<div class="model-button-row">
-				<button @click="switchConversation(model)"
-					:class="{ disabled: !activeModels[model], active: modelValue === model }" class="model-button"
-					:data-model="model">
-					{{ modelMap[model] || model }}
-				</button>
-				<div class="toggle-container">
-					<template v-if="loadingModels[model]">
-						<div class="spinner"></div>
-					</template>
-					<template v-else>
-						<input type="checkbox" :checked="activeModels[model]" @change="toggleModel(model)"
-							class="model-toggle" />
-					</template>
-				</div>
-			</div>
-		</div>
-		<button class="add-button" @click="openDialog">
-			<i class="mdi mdi-plus"></i>
-		</button>
-		<div class="active-line" :class="{ 'transition-enabled': isTransitionEnabled }"
-			:style="{ left: `${activeLinePosition}px`, width: `${activeLineWidth}px` }"></div>
-		<div v-if="showDialog" class="dialog-overlay" @click.self="closeDialog">
-			<div class="dialog">
-				<h3>Select a Model</h3>
-				<div v-if="dialogLoading" class="dialog-spinner"></div>
-				<ul v-else>
-					<li v-for="model in availableModels" :key="model.id" @click="addModel(model)" class="dialog-item">
-						<h4>{{ model.displayName || model.id }}</h4>
-						<p>{{ model.description }}</p>
-						<p><strong>Context Length:</strong> {{ model.context_length }}</p>
-						<p><strong>Pricing:</strong></p>
-						<ul>
-							<li>Prompt: {{ model.pricing.prompt }}</li>
-							<li>Completion: {{ model.pricing.completion }}</li>
-							<li>Image: {{ model.pricing.image }}</li>
-							<li>Request: {{ model.pricing.request }}</li>
-						</ul>
-						<button class="select-button">Select</button>
-					</li>
-				</ul>
-				<button class="close-button" @click="closeDialog">Close</button>
-			</div>
-		</div>
-	</div>
-</template>
-
 <style scoped>
 .model-buttons {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 10px;
 	padding: 10px;
 	background-color: var(--button-background);
@@ -297,13 +309,12 @@ const modelMap = Object.fromEntries(models.map(model => [model.id, model.display
 
 .active-line {
 	position: absolute;
-	bottom: 0;
 	height: 2px;
 	background-color: white;
 }
 
 .active-line.transition-enabled {
-	transition: left 0.3s ease, width 0.3s ease;
+	transition: left 0.3s ease, width 0.3s ease, top 0.3s ease;
 }
 
 @keyframes spin {
