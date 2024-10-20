@@ -1,5 +1,5 @@
 <script setup>
-import { defineProps, defineEmits, ref } from 'vue';
+import { defineProps, defineEmits, ref, watch } from 'vue';
 
 const props = defineProps({
   modelValue: String,
@@ -43,6 +43,17 @@ const addModel = (model) => {
   emit('update:activeModels', { model: model.id, value: true });
   closeDialog();
 };
+
+const activeLinePosition = ref(0);
+const activeLineWidth = ref(0);
+
+watch(() => props.modelValue, (newModel) => {
+  const modelButton = document.querySelector(`[data-model="${newModel}"]`);
+  if (modelButton) {
+    activeLinePosition.value = modelButton.offsetLeft;
+    activeLineWidth.value = modelButton.offsetWidth;
+  }
+}, { immediate: true });
 </script>
 
 <template>
@@ -52,30 +63,34 @@ const addModel = (model) => {
       :key="model"
       class="model-button-wrapper"
     >
-      <button
-        @click="switchConversation(model)"
-        :class="{ disabled: !activeModels[model], active: modelValue === model }"
-        class="model-button"
-      >
-        {{ model }}
-      </button>
-      <div class="toggle-container">
-        <template v-if="loadingModels[model]">
-          <div class="spinner"></div>
-        </template>
-        <template v-else>
-          <input
-            type="checkbox"
-            :checked="activeModels[model]"
-            @change="toggleModel(model)"
-            class="model-toggle"
-          />
-        </template>
+      <div class="model-button-row">
+        <button
+          @click="switchConversation(model)"
+          :class="{ disabled: !activeModels[model], active: modelValue === model }"
+          class="model-button"
+          :data-model="model"
+        >
+          {{ model }}
+        </button>
+        <div class="toggle-container">
+          <template v-if="loadingModels[model]">
+            <div class="spinner"></div>
+          </template>
+          <template v-else>
+            <input
+              type="checkbox"
+              :checked="activeModels[model]"
+              @change="toggleModel(model)"
+              class="model-toggle"
+            />
+          </template>
+        </div>
       </div>
     </div>
     <button class="add-button" @click="openDialog">
       +
     </button>
+    <div class="active-line" :style="{ left: `${activeLinePosition}px`, width: `${activeLineWidth}px` }"></div>
     <div v-if="showDialog" class="dialog-overlay" @click.self="closeDialog">
       <div class="dialog">
         <h3>Select a Model</h3>
@@ -114,9 +129,16 @@ const addModel = (model) => {
   background-color: var(--button-background);
   justify-content: center;
   align-items: center;
+  position: relative;
 }
 
 .model-button-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.model-button-row {
   display: flex;
   align-items: center;
 }
@@ -262,6 +284,14 @@ const addModel = (model) => {
   border-radius: 4px;
   cursor: pointer;
   color: var(--active-text-color);
+}
+
+.active-line {
+  position: absolute;
+  bottom: 0;
+  height: 2px;
+  background-color: white;
+  transition: left 0.3s ease, width 0.3s ease;
 }
 
 @keyframes spin {
