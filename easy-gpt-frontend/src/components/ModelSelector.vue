@@ -1,5 +1,6 @@
 <script setup>
 import { defineProps, defineEmits, ref, watch, nextTick, onMounted } from 'vue';
+import { getModels } from '../services/ModelService';
 
 const props = defineProps({
 	modelValue: String,
@@ -71,6 +72,9 @@ watch(
 		updateActiveLine();
 	}
 );
+
+const models = getModels();
+const modelMap = Object.fromEntries(models.map(model => [model.id, model.displayName]));
 </script>
 
 <template>
@@ -80,7 +84,7 @@ watch(
 				<button @click="switchConversation(model)"
 					:class="{ disabled: !activeModels[model], active: modelValue === model }" class="model-button"
 					:data-model="model">
-					{{ model }}
+					{{ modelMap[model] || model }}
 				</button>
 				<div class="toggle-container">
 					<template v-if="loadingModels[model]">
@@ -94,7 +98,7 @@ watch(
 			</div>
 		</div>
 		<button class="add-button" @click="openDialog">
-			+
+			<i class="mdi mdi-plus"></i>
 		</button>
 		<div class="active-line" :class="{ 'transition-enabled': isTransitionEnabled }"
 			:style="{ left: `${activeLinePosition}px`, width: `${activeLineWidth}px` }"></div>
@@ -104,7 +108,7 @@ watch(
 				<div v-if="dialogLoading" class="dialog-spinner"></div>
 				<ul v-else>
 					<li v-for="model in availableModels" :key="model.id" @click="addModel(model)" class="dialog-item">
-						<h4>{{ model.name }}</h4>
+						<h4>{{ model.displayName || model.id }}</h4>
 						<p>{{ model.description }}</p>
 						<p><strong>Context Length:</strong> {{ model.context_length }}</p>
 						<p><strong>Pricing:</strong></p>
@@ -197,6 +201,9 @@ watch(
 	text-align: center;
 	color: var(--active-text-color);
 	transition: background-color 0.3s;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 .add-button:hover {

@@ -1,8 +1,11 @@
 import axios from 'axios';
-import { reactive } from 'vue';
+import { reactive, nextTick } from 'vue';
 import notificationSound from '../assets/system-notification-199277.mp3';
 
 const DELIMITER = '\u001e';
+const audio = new Audio(notificationSound);
+audio.volume = 0.5;
+audio.preload = 'auto';
 
 export const sendMessage = async (prompt) => {
 	const response = await axios.post('http://localhost:3000/prompt/text', { prompt });
@@ -26,16 +29,12 @@ export const sendSimpleMessage = async () => {
 	try {
 		const botText = await sendMessage(prompt);
 		botMessage.text = botText;
-		const audio = new Audio(notificationSound);
-		audio.volume = 0.5;
 		audio.play();
 		nextTick(() => {
 			messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
 		});
 	} catch (error) {
 		botMessage.text = 'Error: ' + (error.message || 'Unknown error');
-		const audio = new Audio(notificationSound);
-		audio.volume = 0.5;
 		audio.play();
 		nextTick(() => {
 			messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
@@ -88,8 +87,6 @@ export const sendMessageStreaming = async (prompt, model, onMessage) => {
 			}
 
 			if (message === '[DONE]') {
-				const audio = new Audio(notificationSound);
-				audio.volume = 0.5;
 				audio.play();
 				onMessage(message);
 				return;
