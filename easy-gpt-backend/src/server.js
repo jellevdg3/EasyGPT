@@ -2,13 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const OpenRouterService = require('./services/OpenRouterService');
-const PuppeteerService = require('./services/PuppeteerService');
+//const PuppeteerService = require('./services/PuppeteerService');
+//const PlaywrightService = require('./services/PlaywrightService');
 
 // https://bot.sannysoft.com/
 // https://arh.antoinevastel.com/bots/areyouheadless
 // https://antoinevastel.com/bots/
 // https://deviceandbrowserinfo.com/are_you_a_bot
-const puppeteerService = new PuppeteerService({ url: 'https://deviceandbrowserinfo.com/are_you_a_bot' });
+// const puppeteerService = new PuppeteerService({ url: 'https://chatgpt.com/' });
+// const playwrightService = new PlaywrightService({ url: 'https://chatgpt.com/' });
 
 const app = express();
 const service = new OpenRouterService();
@@ -79,5 +81,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
 	console.log(`Azure TTS server is running on port ${PORT}`);
 });
-
-puppeteerService.start();

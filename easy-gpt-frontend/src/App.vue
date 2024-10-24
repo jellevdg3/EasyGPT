@@ -1,19 +1,20 @@
 <script setup>
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { sendMessageStreaming } from './services/PromptService';
 import { getModels, updateModelStatus } from './services/ModelService';
+import vsCodeService from './services/VSCodeService';
 import MessageContainer from './components/MessageContainer.vue';
 import InputContainer from './components/InputContainer.vue';
 import ModelSelector from './components/ModelSelector.vue';
 
 const messages = reactive({});
-
 const models = getModels();
 const activeModels = reactive(Object.fromEntries(models.map(model => [model.id, model.active])));
 const loadingModels = reactive(Object.fromEntries(models.map(model => [model.id, false])));
 
 const currentModel = ref('openai/gpt-4o-mini');
 const userInput = ref('');
+const panelId = ref(null);
 
 const updateActiveModel = ({ model, value }) => {
 	updateModelStatus(model, value);
@@ -43,18 +44,56 @@ const initiateSendMessageStreaming = async () => {
 
 			if (message === '[DONE]') {
 				loadingModels[model] = false;
+				saveState();
 				return;
 			}
 
 			botMessage.text += message;
+			saveState();
 		}).catch(error => {
 			botMessage.text = 'Error: ' + (error.message || 'Unknown error');
 			loadingModels[model] = false;
+			saveState();
 		});
 	});
 
+	saveState();
 	userInput.value = '';
 };
+
+const saveState = () => {
+	vsCodeService.sendData({ 
+		type: 'saveState', 
+		panelId: panelId.value, 
+		state: { 
+			messages: JSON.parse(JSON.stringify(messages)), 
+			currentModel: currentModel.value, 
+			activeModels: JSON.parse(JSON.stringify(activeModels)), 
+			loadingModels: JSON.parse(JSON.stringify(loadingModels)) 
+		} 
+	});
+};
+
+onMounted(() => {
+	vsCodeService.initializeState((data) => {
+		panelId.value = data.panelId;
+		if (window.initializeState) {
+			const state = window.initializeState;
+			if (state.messages) {
+				Object.assign(messages, state.messages);
+			}
+			if (state.currentModel) {
+				currentModel.value = state.currentModel;
+			}
+			if (state.activeModels) {
+				Object.assign(activeModels, state.activeModels);
+			}
+			if (state.loadingModels) {
+				Object.assign(loadingModels, state.loadingModels);
+			}
+		}
+	});
+});
 </script>
 
 <template>

@@ -1,22 +1,20 @@
-const puppeteer = require('puppeteer-extra');
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const playwright = require('playwright-extra');
 const fs = require('fs');
 const path = require('path');
 
-class PuppeteerService {
+class PlaywrightService {
 	constructor({ url, screenshotDir = 'screenshots', screenshotInterval = 5000 }) {
 		this.url = url;
 		this.screenshotDir = screenshotDir;
 		this.screenshotInterval = screenshotInterval;
 		this.browser = null;
+		this.context = null;
 		this.page = null;
 		this.screenshotTimer = null;
 	}
 
 	async initBrowser() {
-		puppeteer.use(StealthPlugin());
-
-		this.browser = await puppeteer.launch({
+		this.browser = await playwright.chromium.launch({
 			headless: false,
 			args: [
 				'--no-sandbox',
@@ -32,13 +30,27 @@ class PuppeteerService {
 				'--enable-features=NetworkService,NetworkServiceInProcess',
 				'--disable-dev-shm-usage',
 			],
-			defaultViewport: null,
+			viewport: null,
 		});
 
-		this.page = await this.browser.newPage();
+		this.context = await this.browser.newContext({
+			viewport: { width: 1366, height: 768 },
+			userAgent:
+				'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
+				'AppleWebKit/537.36 (KHTML, like Gecko) ' +
+				'Chrome/114.0.0.0 Safari/537.36',
+			javaScriptEnabled: true,
+			bypassCSP: true,
+			locale: 'en-US',
+			permissions: ['clipboard-read', 'clipboard-write'],
+		});
 
-		await this.page.evaluateOnNewDocument(() => {
-			delete navigator.__proto__.webdriver;
+		this.page = await this.context.newPage();
+
+		await this.page.addInitScript(() => {
+			Object.defineProperty(navigator, 'webdriver', {
+				get: () => undefined,
+			});
 			window.chrome = {
 				runtime: {},
 				loadedExtensions: [],
@@ -70,51 +82,33 @@ class PuppeteerService {
 				writeText: () => { },
 				readText: () => { },
 			};
-			window.navigator.getBattery = () => Promise.resolve({
-				charging: true,
-				level: 1,
-				onchargingchange: null,
-				onchargingtimechange: null,
-				onlevelchange: null,
-				ondischargingtimechange: null,
-			});
+			window.navigator.getBattery = () =>
+				Promise.resolve({
+					charging: true,
+					level: 1,
+					onchargingchange: null,
+					onchargingtimechange: null,
+					onlevelchange: null,
+					ondischargingtimechange: null,
+				});
 			delete window.csw;
 			delete window.__cf_bm;
 			delete window.__CF_USER_AGENT;
 			const getParameter = WebGLRenderingContext.prototype.getParameter;
 			WebGLRenderingContext.prototype.getParameter = function (parameter) {
-				if (parameter === 37445) { // UNMASKED_VENDOR_WEBGL
+				if (parameter === 37445) {
 					return 'Intel Inc.';
 				}
-				if (parameter === 37446) { // UNMASKED_RENDERER_WEBGL
+				if (parameter === 37446) {
 					return 'Intel Iris OpenGL Engine';
 				}
 				return getParameter.apply(this, arguments);
 			};
 		});
 
-		await this.page.setJavaScriptEnabled(true);
-		await this.page.setCacheEnabled(true);
-		await this.page.setViewport({ width: 1366, height: 768 });
-
 		this.page.on('dialog', async (dialog) => {
 			await dialog.dismiss();
 		});
-
-		await this.page.setRequestInterception(true);
-
-		this.page.on('request', (request) => {
-			request.continue();
-		});
-
-		/*this.page.on('request', (request) => {
-			const resourceType = request.resourceType();
-			if (resourceType === 'image' || resourceType === 'stylesheet' || resourceType === 'font') {
-				request.abort();
-			} else {
-				request.continue();
-			}
-		});*/
 
 		await this.page.setExtraHTTPHeaders({
 			'Accept-Language': 'en-US,en;q=0.9',
@@ -126,7 +120,7 @@ class PuppeteerService {
 		if (!this.page) {
 			throw new Error('Browser is not initialized.');
 		}
-		await this.page.goto(this.url, { waitUntil: 'networkidle2' });
+		await this.page.goto(this.url, { waitUntil: 'networkidle' });
 	}
 
 	startScreenshotInterval() {
@@ -160,7 +154,34 @@ class PuppeteerService {
 		if (this.browser) {
 			await this.browser.close();
 			this.browser = null;
+			this.context = null;
 			this.page = null;
+		}
+	}
+
+	async promptBrowserText(res, prompt, model) {
+		if (!this.page) {
+			throw new Error('Browser is not initialized.');
+		}
+		// Implement the logic to interact with the browser for prompting text
+		// This is a placeholder and should be replaced with actual implementation
+		try {
+			// Example: Navigate to a specific page, enter prompt, and retrieve response
+			await this.page.evaluate((promptText) => {
+				// Example interaction with the page
+				document.querySelector('textarea').value = promptText;
+				document.querySelector('button.submit').click();
+			}, prompt);
+
+			// Wait for response and send it back
+			this.page.on('response', async (response) => {
+				if (response.url().includes('desired-endpoint') && response.status() === 200) {
+					const data = await response.json();
+					res.json(data);
+				}
+			});
+		} catch (error) {
+			throw error;
 		}
 	}
 
@@ -169,17 +190,17 @@ class PuppeteerService {
 			await this.initBrowser();
 			await this.navigate();
 			//this.startScreenshotInterval();
-			console.log('Puppeteer service started. Press Ctrl+C to exit.');
+			console.log('Playwright service started. Press Ctrl+C to exit.');
 			process.on('SIGINT', async () => {
-				console.log('\nShutting down Puppeteer service...');
+				console.log('\nShutting down Playwright service...');
 				await this.closeBrowser();
 				process.exit(0);
 			});
 		} catch (error) {
-			console.error('Error starting Puppeteer service:', error);
+			console.error('Error starting Playwright service:', error);
 			await this.closeBrowser();
 		}
 	}
 }
 
-module.exports = PuppeteerService;
+module.exports = PlaywrightService;

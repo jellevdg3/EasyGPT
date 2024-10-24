@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { reactive, nextTick } from 'vue';
+import vsCodeService from './VSCodeService';
 import notificationSound from '../assets/system-notification-199277.mp3';
 
 const DELIMITER = '\u001e';
@@ -89,10 +90,12 @@ export const sendMessageStreaming = async (prompt, model, onMessage) => {
 			if (message === '[DONE]') {
 				audio.play();
 				onMessage(message);
+				vsCodeService.sendData({ type: 'saveState', state: {} }); // Adjust as needed
 				return;
 			}
 
 			onMessage(message);
+			vsCodeService.sendData({ type: 'saveState', state: {} }); // Adjust as needed
 		}
 	}
 };
