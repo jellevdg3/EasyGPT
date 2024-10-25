@@ -1,3 +1,37 @@
+<template>
+	<div id="app">
+		<div class="header">
+			<ModelSelector v-model="currentModel" :active-models="activeModels" :loading-models="loadingModels"
+				@update:activeModels="updateActiveModel" />
+			<v-btn icon @click="openSettings" class="settings-button elevation-0"
+				style="background-color: transparent;">
+				<v-icon>mdi-cog</v-icon>
+			</v-btn>
+		</div>
+		<MessageContainer :messages="currentModel ? messages[currentModel] : []" />
+		<InputContainer v-model="userInput" @send="initiateSendMessageStreaming" />
+		<v-dialog v-model="settingsDialog" max-width="500px">
+			<v-card>
+				<v-card-title>
+					Settings
+					<v-spacer></v-spacer>
+					<v-btn icon @click="settingsDialog = false">
+						<v-icon>mdi-close</v-icon>
+					</v-btn>
+				</v-card-title>
+				<v-card-text>
+					<!-- Settings content goes here -->
+					<p>Settings content...</p>
+				</v-card-text>
+				<v-card-actions>
+					<v-spacer></v-spacer>
+					<v-btn text @click="settingsDialog = false">Close</v-btn>
+				</v-card-actions>
+			</v-card>
+		</v-dialog>
+	</div>
+</template>
+
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { sendMessageStreaming, sendSimpleMessage } from './services/PromptService';
@@ -6,13 +40,14 @@ import vsCodeService from './services/VSCodeService';
 import MessageContainer from './components/MessageContainer.vue';
 import InputContainer from './components/InputContainer.vue';
 import ModelSelector from './components/ModelSelector.vue';
+import { VBtn, VIcon, VDialog, VCard, VCardTitle, VCardText, VCardActions, VSpacer } from 'vuetify/components';
 
 const messages = reactive({});
 const models = getModels();
 const activeModels = reactive(Object.fromEntries(models.map(model => [model.id, model.active])));
 const loadingModels = reactive(Object.fromEntries(models.map(model => [model.id, false])));
 
-const currentModel = ref('openai/gpt-4o-mini');
+const currentModel = ref(models[0].id);
 const userInput = ref('');
 const panelId = ref(null);
 
@@ -110,16 +145,12 @@ onMounted(() => {
 		}
 	});
 });
-</script>
 
-<template>
-	<div id="app">
-		<ModelSelector v-model="currentModel" :active-models="activeModels" :loading-models="loadingModels"
-			@update:activeModels="updateActiveModel" />
-		<MessageContainer :messages="currentModel ? messages[currentModel] : []" />
-		<InputContainer v-model="userInput" @send="initiateSendMessageStreaming" />
-	</div>
-</template>
+const settingsDialog = ref(false);
+const openSettings = () => {
+	settingsDialog.value = true;
+};
+</script>
 
 <style scoped>
 #app {
@@ -134,9 +165,18 @@ onMounted(() => {
 	position: relative;
 }
 
+.header {
+	display: flex;
+	justify-content: space-between;
+}
+
 @media (min-width: 768px) {
 	#app {
 		max-width: 80vw;
 	}
+}
+
+.settings-button {
+	margin-left: auto;
 }
 </style>
