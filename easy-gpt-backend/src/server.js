@@ -89,7 +89,7 @@ app.post('/azure/prompt/text', async (req, res) => {
 		return res.status(400).json({ error: 'Model is required' });
 	}
 	try {
-		const data = await azureService.promptText(prompt);
+		const data = await azureService.promptTextO1(prompt);
 		res.json(data);
 	} catch (error) {
 		res.status(500).json({ error: error.message });
