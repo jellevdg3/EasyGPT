@@ -8,43 +8,36 @@ const audio = new Audio(notificationSound);
 audio.volume = 0.5;
 audio.preload = 'auto';
 
-export const sendMessage = async (prompt) => {
-	const response = await axios.post('http://localhost:3000/prompt/text', { prompt });
-	const botText = response.data.choices[0].message.content;
-	return botText;
-};
-
-export const sendSimpleMessage = async () => {
-	if (userInput.value.trim() === '') return;
-	const prompt = userInput.value;
-	const userMessage = { sender: 'user', text: prompt };
-	messages.value.push(userMessage);
-	userInput.value = '';
-
-	const botMessage = reactive({ sender: 'bot', text: '' });
-	messages.value.push(botMessage);
-	nextTick(() => {
-		messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
-	});
-
+export const sendSimpleMessage = async (prompt, model, onMessage) => {
 	try {
-		const botText = await sendMessage(prompt);
-		botMessage.text = botText;
-		audio.play();
-		nextTick(() => {
-			messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
-		});
+		const response = await axios.post('http://localhost:3000/azure/prompt/text', { prompt, model });
+
+		if (
+			response.data &&
+			response.data.choices &&
+			Array.isArray(response.data.choices) &&
+			response.data.choices.length > 0 &&
+			response.data.choices[0].message &&
+			response.data.choices[0].message.content
+		) {
+			const parsedText = response.data.choices[0].message.content;
+			onMessage(parsedText);
+		} else {
+			throw new Error('Unexpected response format');
+		}
 	} catch (error) {
-		botMessage.text = 'Error: ' + (error.message || 'Unknown error');
-		audio.play();
-		nextTick(() => {
-			messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
-		});
+		let errorText = 'Unknown error';
+		if (error.response && error.response.data && error.response.data.message) {
+			errorText = error.response.data.message;
+		} else if (error.message) {
+			errorText = error.message;
+		}
+		throw new Error(errorText);
 	}
 };
 
 export const sendMessageStreaming = async (prompt, model, onMessage) => {
-	const response = await fetch('http://localhost:3000/promptStream/text', {
+	const response = await fetch('http://localhost:3000/azure/promptStream/text', {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

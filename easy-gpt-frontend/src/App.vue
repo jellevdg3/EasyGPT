@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-import { sendMessageStreaming } from './services/PromptService';
+import { sendMessageStreaming, sendSimpleMessage } from './services/PromptService';
 import { getModels, updateModelStatus } from './services/ModelService';
 import vsCodeService from './services/VSCodeService';
 import MessageContainer from './components/MessageContainer.vue';
@@ -16,6 +16,8 @@ const currentModel = ref('openai/gpt-4o-mini');
 const userInput = ref('');
 const panelId = ref(null);
 
+const simpleMessage = true;
+
 const updateActiveModel = ({ model, value }) => {
 	updateModelStatus(model, value);
 	activeModels[model] = value;
@@ -27,7 +29,7 @@ const initiateSendMessageStreaming = async () => {
 	const userMessage = { sender: 'user', text: prompt };
 	const modelsToSend = Object.keys(activeModels).filter(model => activeModels[model]);
 
-	modelsToSend.forEach(model => {
+	modelsToSend.forEach(async (model) => {
 		if (!messages[model]) {
 			messages[model] = [];
 		}
@@ -37,24 +39,38 @@ const initiateSendMessageStreaming = async () => {
 		messages[model].push(botMessage);
 		loadingModels[model] = true;
 
-		sendMessageStreaming(prompt, model, (message) => {
-			if (message.startsWith('data: ')) {
-				message = message.substring(6);
-			}
-
-			if (message === '[DONE]') {
+		if (simpleMessage) {
+			try {
+				await sendSimpleMessage(prompt, model, (response) => {
+					botMessage.text = response;
+				});
+			} catch (error) {
+				botMessage.text = 'Error: ' + (error.message || 'Unknown error');
+			} finally {
 				loadingModels[model] = false;
 				saveState();
-				return;
 			}
+		}
+		else {
+			sendMessageStreaming(prompt, model, (message) => {
+				if (message.startsWith('data: ')) {
+					message = message.substring(6);
+				}
 
-			botMessage.text += message;
-			saveState();
-		}).catch(error => {
-			botMessage.text = 'Error: ' + (error.message || 'Unknown error');
-			loadingModels[model] = false;
-			saveState();
-		});
+				if (message === '[DONE]') {
+					loadingModels[model] = false;
+					saveState();
+					return;
+				}
+
+				botMessage.text += message;
+				saveState();
+			}).catch(error => {
+				botMessage.text = 'Error: ' + (error.message || 'Unknown error');
+				loadingModels[model] = false;
+				saveState();
+			});
+		}
 	});
 
 	saveState();
@@ -62,15 +78,15 @@ const initiateSendMessageStreaming = async () => {
 };
 
 const saveState = () => {
-	vsCodeService.sendData({ 
-		type: 'saveState', 
-		panelId: panelId.value, 
-		state: { 
-			messages: JSON.parse(JSON.stringify(messages)), 
-			currentModel: currentModel.value, 
-			activeModels: JSON.parse(JSON.stringify(activeModels)), 
-			loadingModels: JSON.parse(JSON.stringify(loadingModels)) 
-		} 
+	vsCodeService.sendData({
+		type: 'saveState',
+		panelId: panelId.value,
+		state: {
+			messages: JSON.parse(JSON.stringify(messages)),
+			currentModel: currentModel.value,
+			activeModels: JSON.parse(JSON.stringify(activeModels)),
+			loadingModels: JSON.parse(JSON.stringify(loadingModels))
+		}
 	});
 };
 
@@ -98,12 +114,8 @@ onMounted(() => {
 
 <template>
 	<div id="app">
-		<ModelSelector 
-			v-model="currentModel" 
-			:active-models="activeModels" 
-			:loading-models="loadingModels"
-			@update:activeModels="updateActiveModel" 
-		/>
+		<ModelSelector v-model="currentModel" :active-models="activeModels" :loading-models="loadingModels"
+			@update:activeModels="updateActiveModel" />
 		<MessageContainer :messages="currentModel ? messages[currentModel] : []" />
 		<InputContainer v-model="userInput" @send="initiateSendMessageStreaming" />
 	</div>
