@@ -2,7 +2,7 @@
 	<div id="app">
 		<div class="header">
 			<ModelSelector v-model="currentModel" :active-models="activeModels" :loading-models="loadingModels"
-				@update:activeModels="updateActiveModel" />
+				@update:activeModels="updateActiveModel" @removeModel="removeActiveModel" />
 			<v-btn icon @click="openSettings" class="settings-button elevation-0"
 				style="background-color: transparent;">
 				<v-icon>mdi-cog</v-icon>
@@ -10,14 +10,9 @@
 		</div>
 		<MessageContainer :messages="currentModel ? messages[currentModel] : []" />
 		<InputContainer v-model="userInput" @send="initiateSendMessageStreaming" @clear="clearMessages" />
-		<SettingsDialog v-model="settingsDialog" 
-			:appendCode="appendCode" 
-			:playSound="playSound" 
-			:clearChat="clearChat"
-			@update:appendCode="updateAppendCode"
-			@update:playSound="updatePlaySound"
-			@update:clearChat="updateClearChat"
-		/>
+		<SettingsDialog v-model="settingsDialog" :appendCode="appendCode" :playSound="playSound" :clearChat="clearChat"
+			@update:appendCode="updateAppendCode" @update:playSound="updatePlaySound"
+			@update:clearChat="updateClearChat" />
 	</div>
 </template>
 
@@ -42,14 +37,24 @@ const userInput = ref('');
 const panelId = ref(null);
 
 const appendCode = ref(false);
-const playSound = ref(false);
-const clearChat = ref(false);
+const playSound = ref(true);
+const clearChat = ref(true);
 
 const settingsDialog = ref(false);
 
 const updateActiveModel = ({ model, value }) => {
 	updateModelStatus(model, value);
 	activeModels[model] = value;
+	saveState();
+};
+
+const removeActiveModel = (model) => {
+	updateModelStatus(model, false);
+	delete activeModels[model];
+	if (currentModel.value === model) {
+		const remainingModels = Object.keys(activeModels);
+		currentModel.value = remainingModels.length > 0 ? remainingModels[0] : null;
+	}
 	saveState();
 };
 
@@ -142,11 +147,7 @@ const clearMessages = () => {
 const saveState = () => {
 	if (panelId.value) {
 		LocalDatabaseService.saveData(`messages_${panelId.value}`, messages);
-		LocalDatabaseService.saveData(`settings_${panelId.value}`, {
-			appendCode: appendCode.value,
-			playSound: playSound.value,
-			clearChat: clearChat.value
-		});
+		saveSettings();
 	}
 };
 
@@ -158,30 +159,30 @@ const loadState = () => {
 				messages[model] = reactive(savedMessages[model]);
 			});
 		}
-		const savedSettings = LocalDatabaseService.loadData(`settings_${panelId.value}`);
-		if (savedSettings) {
-			appendCode.value = savedSettings.appendCode;
-			playSound.value = savedSettings.playSound;
-			clearChat.value = savedSettings.clearChat;
-		}
+	}
+
+	const savedSettings = LocalDatabaseService.loadData(`settings`);
+	if (savedSettings) {
+		appendCode.value = savedSettings.appendCode;
+		playSound.value = savedSettings.playSound;
+		clearChat.value = savedSettings.clearChat;
 	}
 };
 
 const saveSettings = () => {
-	if (panelId.value) {
-		LocalDatabaseService.saveData(`settings_${panelId.value}`, {
-			appendCode: appendCode.value,
-			playSound: playSound.value,
-			clearChat: clearChat.value
-		});
-	}
+	LocalDatabaseService.saveData(`settings`, {
+		appendCode: appendCode.value,
+		playSound: playSound.value,
+		clearChat: clearChat.value
+	});
 };
 
 onMounted(() => {
 	if (window.panelId) {
 		panelId.value = window.panelId;
-		loadState();
 	}
+
+	loadState();
 });
 
 watch(panelId, () => {

@@ -1,26 +1,18 @@
 <template>
-	<v-dialog :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" max-width="500px">
+	<v-dialog :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" max-width="500px" eager
+		transition="dialog-bottom-transition" style="z-index: 10000;">
 		<v-card dark color="grey darken-3">
 			<v-card-title class="text-white">
 				Settings
 				<v-spacer></v-spacer>
 			</v-card-title>
 			<v-card-text class="text-white">
-				<v-switch
-					label="Append code automatically"
-					:model-value="localAppendCode"
-					@update:model-value="updateAppendCodeLocal"
-				></v-switch>
-				<v-switch
-					label="Play sound upon completion"
-					:model-value="localPlaySound"
-					@update:model-value="updatePlaySoundLocal"
-				></v-switch>
-				<v-switch
-					label="Clear chat on every new request"
-					:model-value="localClearChat"
-					@update:model-value="updateClearChatLocal"
-				></v-switch>
+				<v-switch label="Append code automatically" :model-value="localAppendCode"
+					@update:model-value="updateAppendCodeLocal"></v-switch>
+				<v-switch label="Play sound upon completion" :model-value="localPlaySound"
+					@update:model-value="updatePlaySoundLocal"></v-switch>
+				<v-switch label="Clear chat on every new request" :model-value="localClearChat"
+					@update:model-value="updateClearChatLocal"></v-switch>
 			</v-card-text>
 			<v-card-actions>
 				<v-spacer></v-spacer>
@@ -91,5 +83,4 @@ const close = () => {
 };
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

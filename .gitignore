@@ -129,3 +129,4 @@ dist
 .yarn/install-state.gz
 .pnp.*
 easy-gpt-frontend/package-lock.json
+easy-gpt-backend/cache

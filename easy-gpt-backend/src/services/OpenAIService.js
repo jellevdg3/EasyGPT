@@ -1,7 +1,22 @@
 const axios = require('axios');
 const AIServiceInterface = require('./AIServiceInterface');
+const fs = require('fs');
+const path = require('path');
 
 class OpenAIService extends AIServiceInterface {
+	constructor() {
+		super();
+		this.cacheDir = path.join(__dirname, '../../cache');
+		this.cacheFile = path.join(this.cacheDir, 'openai_models.json');
+		this.ensureCacheDir();
+	}
+
+	ensureCacheDir() {
+		if (!fs.existsSync(this.cacheDir)) {
+			fs.mkdirSync(this.cacheDir, { recursive: true });
+		}
+	}
+
 	async promptText(prompt, model = 'gpt-4o-mini', maxTokens = 8192, temperature = 0.7) {
 		const response = await axios.post('https://api.openai.com/v1/chat/completions', {
 			model: model,
@@ -79,12 +94,47 @@ class OpenAIService extends AIServiceInterface {
 	}
 
 	async listModels() {
-		const response = await axios.get('https://api.openai.com/v1/models', {
-			headers: {
-				'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+		const now = Date.now();
+		const oneDay = 24 * 60 * 60 * 1000;
+		let cachedData = null;
+		if (fs.existsSync(this.cacheFile)) {
+			try {
+				const fileContent = fs.readFileSync(this.cacheFile, 'utf-8');
+				const parsed = JSON.parse(fileContent);
+				cachedData = parsed.data;
+				const lastFetched = parsed.timestamp;
+				if (now - lastFetched > oneDay) {
+					this.refreshCache();
+				}
+			} catch (error) {
+				console.error('Error reading cache:', error);
 			}
+		} else {
+			this.refreshCache();
+		}
+		return cachedData || await this.fetchAndCacheModels();
+	}
+
+	async fetchAndCacheModels() {
+		try {
+			const response = await axios.get('https://api.openai.com/v1/models', {
+				headers: {
+					'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+				}
+			});
+			const data = response.data;
+			fs.writeFileSync(this.cacheFile, JSON.stringify({ data, timestamp: Date.now() }), 'utf-8');
+			return data;
+		} catch (error) {
+			console.error('Error in listModels:', error.response ? error.response.data : error.message);
+			throw error;
+		}
+	}
+
+	async refreshCache() {
+		this.fetchAndCacheModels().catch(error => {
+			console.error('Error refreshing cache:', error);
 		});
-		return response.data;
 	}
 };
 

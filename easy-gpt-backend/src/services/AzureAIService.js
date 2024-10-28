@@ -1,5 +1,7 @@
 const axios = require('axios');
 const AIServiceInterface = require('./AIServiceInterface');
+const fs = require('fs');
+const path = require('path');
 
 class AzureAIService extends AIServiceInterface {
 	constructor() {
@@ -11,6 +13,16 @@ class AzureAIService extends AIServiceInterface {
 
 		if (!this.apiKey || !this.endpoint || !this.deploymentName) {
 			throw new Error('Missing required Azure OpenAI environment variables: AZURE_API_KEY, AZURE_API_ENDPOINT, AZURE_DEPLOYMENT_NAME.');
+		}
+
+		this.cacheDir = path.join(__dirname, '../../cache');
+		this.cacheFile = path.join(this.cacheDir, 'azure_models.json');
+		this.ensureCacheDir();
+	}
+
+	ensureCacheDir() {
+		if (!fs.existsSync(this.cacheDir)) {
+			fs.mkdirSync(this.cacheDir, { recursive: true });
 		}
 	}
 
@@ -181,6 +193,28 @@ class AzureAIService extends AIServiceInterface {
 	}
 
 	async listModels() {
+		const now = Date.now();
+		const oneDay = 24 * 60 * 60 * 1000;
+		let cachedData = null;
+		if (fs.existsSync(this.cacheFile)) {
+			try {
+				const fileContent = fs.readFileSync(this.cacheFile, 'utf-8');
+				const parsed = JSON.parse(fileContent);
+				cachedData = parsed.data;
+				const lastFetched = parsed.timestamp;
+				if (now - lastFetched > oneDay) {
+					this.refreshCache();
+				}
+			} catch (error) {
+				console.error('Error reading cache:', error);
+			}
+		} else {
+			this.refreshCache();
+		}
+		return cachedData || await this.fetchAndCacheModels();
+	}
+
+	async fetchAndCacheModels() {
 		const url = `${this.endpoint}/openai/models?api-version=${this.apiVersion}`;
 		try {
 			const response = await axios.get(url, {
@@ -188,11 +222,19 @@ class AzureAIService extends AIServiceInterface {
 					'api-key': this.apiKey
 				}
 			});
-			return response.data;
+			const data = response.data;
+			fs.writeFileSync(this.cacheFile, JSON.stringify({ data, timestamp: Date.now() }), 'utf-8');
+			return data;
 		} catch (error) {
 			console.error('Error in listModels:', error.response ? error.response.data : error.message);
 			throw error;
 		}
+	}
+
+	async refreshCache() {
+		this.fetchAndCacheModels().catch(error => {
+			console.error('Error refreshing cache:', error);
+		});
 	}
 }
 
