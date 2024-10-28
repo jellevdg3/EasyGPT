@@ -31,33 +31,41 @@
 			<transition name="fade">
 				<div v-if="showDialog" class="dialog-overlay" @click.self="closeDialog">
 					<div class="dialog">
-						<h3>Select a Model</h3>
-						<input type="text" v-model="searchQuery" placeholder="Search models..." class="search-bar" />
-						<div v-if="dialogLoading" class="dialog-spinner"></div>
-						<ul v-else>
-							<li v-for="model in filteredModels" :key="model.id" class="dialog-item">
-								<div class="model-item-header">
-									<h2>{{ model.name || model.id }}</h2>
-									<button class="select-button" @click="addModel(model)">Select</button>
-								</div>
-								<div class="model-details">
-									<p>{{ model.description }}</p>
-									<br>
-									<p><strong>Creation Date:</strong> {{ formatDate(model.created) }}</p>
-									<p><strong>Context Length:</strong> {{ model.context_length }}</p>
-									<p><strong>Moderated:</strong> {{ model.top_provider.is_moderated ? 'Yes' : 'No' }}
-									</p>
-									<ul>
-										<li><strong>Input:</strong> ${{ formatPrice(model.pricing.prompt) }} per million
-											tokens
-										</li>
-										<li><strong>Output:</strong> ${{ formatPrice(model.pricing.completion) }} per
-											million
-											tokens</li>
-									</ul>
-								</div>
-							</li>
-						</ul>
+						<div class="dialog-header">
+							<h3>Select a Model</h3>
+							<input type="text" v-model="searchQuery" placeholder="Search models..."
+								class="search-bar" />
+						</div>
+						<div class="dialog-content">
+							<div v-if="dialogLoading" class="dialog-spinner"></div>
+							<ul v-else>
+								<li v-for="model in filteredModels" :key="model.id" class="dialog-item">
+									<div class="model-item-header">
+										<h2>{{ model.name || model.id }}</h2>
+										<button class="select-button" @click="addModel(model)">Select</button>
+									</div>
+									<div class="model-details">
+										<p>{{ model.description }}</p>
+										<br>
+										<p><strong>Creation Date:</strong> {{ formatDate(model.created) }}</p>
+										<p><strong>Context Length:</strong> {{ model.context_length }}</p>
+										<p><strong>Moderated:</strong> {{ model.top_provider.is_moderated ? 'Yes' : 'No'
+											}}
+										</p>
+										<ul>
+											<li><strong>Input:</strong> ${{ formatPrice(model.pricing.prompt) }} per
+												million
+												tokens
+											</li>
+											<li><strong>Output:</strong> ${{ formatPrice(model.pricing.completion) }}
+												per
+												million
+												tokens</li>
+										</ul>
+									</div>
+								</li>
+							</ul>
+						</div>
 						<button class="close-button" @click="closeDialog">Close</button>
 					</div>
 				</div>
@@ -302,24 +310,37 @@ const formatPrice = (priceStr) => {
 	border-radius: 8px;
 	width: 1024px;
 	max-height: 80vh;
-	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
 	color: #ffffff;
 	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.dialog-header {
+	flex: none;
+	margin-bottom: 10px;
+}
+
+.dialog-header h3 {
+	margin: 0 0 10px 0;
+	color: #ffffff;
 }
 
 .search-bar {
 	width: 100%;
 	padding: 8px;
-	margin-bottom: 15px;
+	margin-bottom: 0;
 	border: 1px solid #444;
 	border-radius: 4px;
 	background-color: #3a3a3a;
 	color: #fff;
+	box-sizing: border-box;
 }
 
-.dialog h3 {
-	margin-top: 0;
-	color: #ffffff;
+.dialog-content {
+	flex: 1;
+	overflow-y: auto;
 }
 
 .dialog-spinner {
@@ -335,6 +356,7 @@ const formatPrice = (priceStr) => {
 .dialog ul {
 	list-style: none;
 	padding: 0;
+	margin: 0;
 }
 
 .dialog-item {
