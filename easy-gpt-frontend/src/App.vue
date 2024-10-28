@@ -9,7 +9,7 @@
 			</v-btn>
 		</div>
 		<MessageContainer :messages="currentModel ? messages[currentModel] : []" />
-		<InputContainer v-model="userInput" @send="initiateSendMessageStreaming" />
+		<InputContainer v-model="userInput" @send="initiateSendMessageStreaming" @clear="clearMessages" />
 		<v-dialog v-model="settingsDialog" max-width="500px">
 			<v-card>
 				<v-card-title>
@@ -33,14 +33,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, watch } from 'vue';
 import { sendMessageStreaming, sendSimpleMessage } from './services/PromptService';
 import { getModels, updateModelStatus } from './services/ModelService';
-import vsCodeService from './services/VSCodeService';
 import MessageContainer from './components/MessageContainer.vue';
 import InputContainer from './components/InputContainer.vue';
 import ModelSelector from './components/ModelSelector.vue';
 import { VBtn, VIcon, VDialog, VCard, VCardTitle, VCardText, VCardActions, VSpacer } from 'vuetify/components';
+import LocalDatabaseService from './services/LocalDatabaseService';
 
 const messages = reactive({});
 const models = getModels();
@@ -56,6 +56,7 @@ const simpleMessage = true;
 const updateActiveModel = ({ model, value }) => {
 	updateModelStatus(model, value);
 	activeModels[model] = value;
+	saveState();
 };
 
 const initiateSendMessageStreaming = async () => {
@@ -112,38 +113,41 @@ const initiateSendMessageStreaming = async () => {
 	userInput.value = '';
 };
 
-const saveState = () => {
-	vsCodeService.sendData({
-		type: 'saveState',
-		panelId: panelId.value,
-		state: {
-			messages: JSON.parse(JSON.stringify(messages)),
-			currentModel: currentModel.value,
-			activeModels: JSON.parse(JSON.stringify(activeModels)),
-			loadingModels: JSON.parse(JSON.stringify(loadingModels))
+const clearMessages = () => {
+	for (const key in messages) {
+		if (messages.hasOwnProperty(key)) {
+			messages[key] = [];
 		}
-	});
+	}
+	saveState();
+};
+
+const saveState = () => {
+	if (panelId.value) {
+		LocalDatabaseService.saveData(`messages_${panelId.value}`, messages);
+	}
+};
+
+const loadState = () => {
+	if (panelId.value) {
+		const savedMessages = LocalDatabaseService.loadData(`messages_${panelId.value}`);
+		if (savedMessages) {
+			Object.keys(savedMessages).forEach(model => {
+				messages[model] = reactive(savedMessages[model]);
+			});
+		}
+	}
 };
 
 onMounted(() => {
-	vsCodeService.initializeState((data) => {
-		panelId.value = data.panelId;
-		if (window.initializeState) {
-			const state = window.initializeState;
-			if (state.messages) {
-				Object.assign(messages, state.messages);
-			}
-			if (state.currentModel) {
-				currentModel.value = state.currentModel;
-			}
-			if (state.activeModels) {
-				Object.assign(activeModels, state.activeModels);
-			}
-			if (state.loadingModels) {
-				Object.assign(loadingModels, state.loadingModels);
-			}
-		}
-	});
+	if (window.panelId) {
+		panelId.value = window.panelId;
+		loadState();
+	}
+});
+
+watch(panelId, () => {
+	loadState();
 });
 
 const settingsDialog = ref(false);
@@ -163,6 +167,10 @@ const openSettings = () => {
 	height: 100vh;
 	overflow: hidden;
 	position: relative;
+}
+
+.panel-id {
+	padding: 10px;
 }
 
 .header {

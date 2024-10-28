@@ -34,7 +34,7 @@ const copyMessage = () => {
 <style scoped>
 .message {
   min-width: 30%;
-  max-width: 60%;
+  max-width: 100%;
   padding: 0.5em 1em;
   margin: 0.5em 0;
   border-radius: 10px;
@@ -42,6 +42,12 @@ const copyMessage = () => {
   color: var(--message-text);
   word-wrap: break-word;
   position: relative;
+}
+
+@media (min-width: 768px) {
+  .message {
+    max-width: 60%;
+  }
 }
 
 .user {

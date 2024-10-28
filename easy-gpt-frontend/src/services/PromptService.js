@@ -2,6 +2,7 @@ import axios from 'axios';
 import { reactive, nextTick } from 'vue';
 import vsCodeService from './VSCodeService';
 import notificationSound from '../assets/system-notification-199277.mp3';
+import LocalDatabaseService from './LocalDatabaseService';
 
 const DELIMITER = '\u001e';
 const audio = new Audio(notificationSound);
@@ -21,6 +22,7 @@ export const sendSimpleMessage = async (prompt, model, onMessage) => {
 			response.data.choices[0].message.content
 		) {
 			const parsedText = response.data.choices[0].message.content;
+			audio.play();
 			onMessage(parsedText);
 		} else {
 			throw new Error('Unexpected response format');
@@ -83,12 +85,13 @@ export const sendMessageStreaming = async (prompt, model, onMessage) => {
 			if (message === '[DONE]') {
 				audio.play();
 				onMessage(message);
-				vsCodeService.sendData({ type: 'saveState', state: {} }); // Adjust as needed
+				vsCodeService.sendData({ type: 'saveState', state: {} });
 				return;
 			}
 
 			onMessage(message);
-			vsCodeService.sendData({ type: 'saveState', state: {} }); // Adjust as needed
+			vsCodeService.sendData({ type: 'saveState', state: {} });
+			LocalDatabaseService.saveData(`messages_${window.panelId}`, JSON.parse(localStorage.getItem(`messages_${window.panelId}`)) || {});
 		}
 	}
 };

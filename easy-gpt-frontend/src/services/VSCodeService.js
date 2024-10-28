@@ -1,4 +1,3 @@
-// src/services/VSCodeService.js
 class VSCodeService {
 	constructor() {
 		if (VSCodeService.instance) {
@@ -18,24 +17,6 @@ class VSCodeService {
 	sendData(data) {
 		if (this.IsInVSCode && this.vscodeApi) {
 			this.vscodeApi.postMessage(data);
-		}
-	}
-
-	receiveData(callback) {
-		if (this.IsInVSCode) {
-			window.addEventListener('message', (event) => {
-				callback(event.data);
-			});
-		}
-	}
-
-	initializeState(callback) {
-		if (this.IsInVSCode) {
-			window.addEventListener('message', (event) => {
-				if (event.data.type === 'initialize') {
-					callback(event.data);
-				}
-			});
 		}
 	}
 }
