@@ -9,7 +9,7 @@ const audio = new Audio(notificationSound);
 audio.volume = 0.5;
 audio.preload = 'auto';
 
-export const sendSimpleMessage = async (prompt, model, onMessage) => {
+export const sendSimpleMessage = async (prompt, model, onMessage, playSound) => {
 	try {
 		const response = await axios.post('http://localhost:3000/azure/prompt/text', { prompt, model });
 
@@ -22,7 +22,9 @@ export const sendSimpleMessage = async (prompt, model, onMessage) => {
 			response.data.choices[0].message.content
 		) {
 			const parsedText = response.data.choices[0].message.content;
-			audio.play();
+			if (playSound) {
+				audio.play();
+			}
 			onMessage(parsedText);
 		} else {
 			throw new Error('Unexpected response format');
@@ -38,7 +40,7 @@ export const sendSimpleMessage = async (prompt, model, onMessage) => {
 	}
 };
 
-export const sendMessageStreaming = async (prompt, model, onMessage) => {
+export const sendMessageStreaming = async (prompt, model, onMessage, playSound) => {
 	const response = await fetch('http://localhost:3000/azure/promptStream/text', {
 		method: 'POST',
 		headers: {
@@ -83,7 +85,9 @@ export const sendMessageStreaming = async (prompt, model, onMessage) => {
 			}
 
 			if (message === '[DONE]') {
-				audio.play();
+				if (playSound) {
+					audio.play();
+				}
 				onMessage(message);
 				vsCodeService.sendData({ type: 'saveState', state: {} });
 				return;

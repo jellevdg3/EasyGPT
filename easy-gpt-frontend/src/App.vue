@@ -10,25 +10,14 @@
 		</div>
 		<MessageContainer :messages="currentModel ? messages[currentModel] : []" />
 		<InputContainer v-model="userInput" @send="initiateSendMessageStreaming" @clear="clearMessages" />
-		<v-dialog v-model="settingsDialog" max-width="500px">
-			<v-card>
-				<v-card-title>
-					Settings
-					<v-spacer></v-spacer>
-					<v-btn icon @click="settingsDialog = false">
-						<v-icon>mdi-close</v-icon>
-					</v-btn>
-				</v-card-title>
-				<v-card-text>
-					<!-- Settings content goes here -->
-					<p>Settings content...</p>
-				</v-card-text>
-				<v-card-actions>
-					<v-spacer></v-spacer>
-					<v-btn text @click="settingsDialog = false">Close</v-btn>
-				</v-card-actions>
-			</v-card>
-		</v-dialog>
+		<SettingsDialog v-model="settingsDialog" 
+			:appendCode="appendCode" 
+			:playSound="playSound" 
+			:clearChat="clearChat"
+			@update:appendCode="updateAppendCode"
+			@update:playSound="updatePlaySound"
+			@update:clearChat="updateClearChat"
+		/>
 	</div>
 </template>
 
@@ -39,7 +28,8 @@ import { getModels, updateModelStatus } from './services/ModelService';
 import MessageContainer from './components/MessageContainer.vue';
 import InputContainer from './components/InputContainer.vue';
 import ModelSelector from './components/ModelSelector.vue';
-import { VBtn, VIcon, VDialog, VCard, VCardTitle, VCardText, VCardActions, VSpacer } from 'vuetify/components';
+import SettingsDialog from './components/SettingsDialog.vue';
+import { VBtn, VIcon, VSpacer } from 'vuetify/components';
 import LocalDatabaseService from './services/LocalDatabaseService';
 
 const messages = reactive({});
@@ -51,7 +41,11 @@ const currentModel = ref(models[0].id);
 const userInput = ref('');
 const panelId = ref(null);
 
-const simpleMessage = true;
+const appendCode = ref(false);
+const playSound = ref(false);
+const clearChat = ref(false);
+
+const settingsDialog = ref(false);
 
 const updateActiveModel = ({ model, value }) => {
 	updateModelStatus(model, value);
@@ -59,7 +53,25 @@ const updateActiveModel = ({ model, value }) => {
 	saveState();
 };
 
+const updateAppendCode = (val) => {
+	appendCode.value = val;
+	saveSettings();
+};
+
+const updatePlaySound = (val) => {
+	playSound.value = val;
+	saveSettings();
+};
+
+const updateClearChat = (val) => {
+	clearChat.value = val;
+	saveSettings();
+};
+
 const initiateSendMessageStreaming = async () => {
+	if (clearChat.value) {
+		clearMessages();
+	}
 	if (userInput.value.trim() === '') return;
 	const prompt = userInput.value;
 	const userMessage = { sender: 'user', text: prompt };
@@ -75,11 +87,16 @@ const initiateSendMessageStreaming = async () => {
 		messages[model].push(botMessage);
 		loadingModels[model] = true;
 
+		if (appendCode.value) {
+			// Implement append code functionality if needed
+		}
+
+		let simpleMessage = true; // Assuming simpleMessage is defined somewhere
 		if (simpleMessage) {
 			try {
 				await sendSimpleMessage(prompt, model, (response) => {
 					botMessage.text = response;
-				});
+				}, playSound.value);
 			} catch (error) {
 				botMessage.text = 'Error: ' + (error.message || 'Unknown error');
 			} finally {
@@ -101,7 +118,7 @@ const initiateSendMessageStreaming = async () => {
 
 				botMessage.text += message;
 				saveState();
-			}).catch(error => {
+			}, playSound.value).catch(error => {
 				botMessage.text = 'Error: ' + (error.message || 'Unknown error');
 				loadingModels[model] = false;
 				saveState();
@@ -125,6 +142,11 @@ const clearMessages = () => {
 const saveState = () => {
 	if (panelId.value) {
 		LocalDatabaseService.saveData(`messages_${panelId.value}`, messages);
+		LocalDatabaseService.saveData(`settings_${panelId.value}`, {
+			appendCode: appendCode.value,
+			playSound: playSound.value,
+			clearChat: clearChat.value
+		});
 	}
 };
 
@@ -136,6 +158,22 @@ const loadState = () => {
 				messages[model] = reactive(savedMessages[model]);
 			});
 		}
+		const savedSettings = LocalDatabaseService.loadData(`settings_${panelId.value}`);
+		if (savedSettings) {
+			appendCode.value = savedSettings.appendCode;
+			playSound.value = savedSettings.playSound;
+			clearChat.value = savedSettings.clearChat;
+		}
+	}
+};
+
+const saveSettings = () => {
+	if (panelId.value) {
+		LocalDatabaseService.saveData(`settings_${panelId.value}`, {
+			appendCode: appendCode.value,
+			playSound: playSound.value,
+			clearChat: clearChat.value
+		});
 	}
 };
 
@@ -150,7 +188,6 @@ watch(panelId, () => {
 	loadState();
 });
 
-const settingsDialog = ref(false);
 const openSettings = () => {
 	settingsDialog.value = true;
 };

@@ -11,17 +11,43 @@ import 'vuetify/styles';
 import { aliases, mdi } from 'vuetify/iconsets/mdi';
 
 const vuetify = createVuetify({
-	components,
-	directives,
-	icons: {
-		defaultSet: 'mdi',
-		aliases,
-		sets: {
-			mdi,
-		},
-	},
+  components,
+  directives,
+  theme: {
+    dark: true,
+    themes: {
+      dark: {
+        colors: {
+          background: '#1e1e1e',
+          surface: '#2d2d2d',
+          primary: '#007acc',
+          secondary: '#005a9e',
+          error: '#ff5252',
+          info: '#2196f3',
+          success: '#4caf50',
+          warning: '#fb8c00',
+          text: '#d4d4d4',
+          onBackground: '#d4d4d4',
+          onSurface: '#d4d4d4',
+          onPrimary: '#ffffff',
+          onSecondary: '#ffffff',
+          onError: '#ffffff',
+          onInfo: '#ffffff',
+          onSuccess: '#ffffff',
+          onWarning: '#ffffff',
+        },
+      },
+    },
+  },
+  icons: {
+    defaultSet: 'mdi',
+    aliases,
+    sets: {
+      mdi,
+    },
+  },
 });
 
 createApp(App)
-	.use(vuetify)
-	.mount('#app');
+  .use(vuetify)
+  .mount('#app');
