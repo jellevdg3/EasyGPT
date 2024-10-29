@@ -32,7 +32,7 @@
 				<div v-if="showDialog" class="dialog-overlay" @click.self="closeDialog">
 					<div class="dialog">
 						<div class="dialog-header">
-							<h3>Select a Model</h3>
+							<h3>Select a Model ({{ availableModels.length }})</h3>
 							<input type="text" v-model="searchQuery" placeholder="Search models..."
 								class="search-bar" />
 						</div>
