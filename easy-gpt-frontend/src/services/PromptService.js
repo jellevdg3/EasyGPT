@@ -11,7 +11,14 @@ audio.preload = 'auto';
 
 export const sendSimpleMessage = async (prompt, model, onMessage, playSound) => {
 	try {
-		const response = await axios.post('http://localhost:3000/azure/prompt/text', { prompt, model });
+		let endpoint = 'http://localhost:3000/prompt/text';
+
+		// Check if model starts with azure
+		if (model.startsWith('azure')) {
+			endpoint = 'http://localhost:3000/azure/prompt/text';
+		}
+
+		const response = await axios.post(endpoint, { prompt, model });
 
 		if (
 			response.data &&
@@ -41,7 +48,13 @@ export const sendSimpleMessage = async (prompt, model, onMessage, playSound) => 
 };
 
 export const sendMessageStreaming = async (prompt, model, onMessage, playSound) => {
-	const response = await fetch('http://localhost:3000/azure/promptStream/text', {
+	let endpoint = 'http://localhost:3000/promptStream/text';
+	// Check if model starts with azure
+	if (model.startsWith('azure')) {
+		endpoint = 'http://localhost:3000/azure/promptStream/text';
+	}
+
+	const response = await fetch(endpoint, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

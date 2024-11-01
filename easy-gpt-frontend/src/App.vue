@@ -74,12 +74,53 @@ const updateClearChat = (val) => {
 	saveSettings();
 };
 
+const handleSendSimpleMessage = async (model, prompt, botMessage) => {
+	try {
+		await sendSimpleMessage(prompt, model, (response) => {
+			botMessage.text = response;
+		}, playSound.value);
+	} catch (error) {
+		botMessage.text = 'Error: ' + (error.message || 'Unknown error');
+	} finally {
+		loadingModels[model] = false;
+		saveState();
+	}
+};
+
+const handleSendStreamingMessage = async (model, prompt, botMessage) => {
+	try {
+		await sendSimpleMessage(prompt, model, (message) => {
+				if (message.startsWith('data: ')) {
+					message = message.substring(6);
+				}
+
+				if (message === '[DONE]') {
+					loadingModels[model] = false;
+					saveState();
+					return;
+				}
+
+				botMessage.text += message;
+				saveState();
+			}, playSound.value).catch(error => {
+				botMessage.text = 'Error: ' + (error.message || 'Unknown error');
+				loadingModels[model] = false;
+				saveState();
+			});
+		}
+		catch (error) {
+			botMessage.text = 'Error: ' + (error.message || 'Unknown error');
+			loadingModels[model] = false;
+			saveState();
+		}
+};
+
 const initiateSendMessageStreaming = async () => {
 	if (clearChat.value) {
 		clearMessages();
 	}
 	if (userInput.value.trim() === '') return;
-	
+
 	let prompt = userInput.value;
 	userInput.value = '';
 
@@ -109,36 +150,10 @@ const initiateSendMessageStreaming = async () => {
 
 		let simpleMessage = true;
 		if (simpleMessage) {
-			try {
-				await sendSimpleMessage(prompt, model, (response) => {
-					botMessage.text = response;
-				}, playSound.value);
-			} catch (error) {
-				botMessage.text = 'Error: ' + (error.message || 'Unknown error');
-			} finally {
-				loadingModels[model] = false;
-				saveState();
-			}
+			handleSendSimpleMessage(model, prompt, botMessage);
 		}
 		else {
-			sendMessageStreaming(prompt, model, (message) => {
-				if (message.startsWith('data: ')) {
-					message = message.substring(6);
-				}
-
-				if (message === '[DONE]') {
-					loadingModels[model] = false;
-					saveState();
-					return;
-				}
-
-				botMessage.text += message;
-				saveState();
-			}, playSound.value).catch(error => {
-				botMessage.text = 'Error: ' + (error.message || 'Unknown error');
-				loadingModels[model] = false;
-				saveState();
-			});
+			handleSendStreamingMessage(model, prompt, botMessage);
 		}
 	}
 
