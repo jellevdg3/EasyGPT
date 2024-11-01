@@ -79,7 +79,10 @@ const initiateSendMessageStreaming = async () => {
 		clearMessages();
 	}
 	if (userInput.value.trim() === '') return;
+	
 	let prompt = userInput.value;
+	userInput.value = '';
+
 	const userMessage = { sender: 'user', text: prompt };
 	const modelsToSend = Object.keys(activeModels).filter(model => activeModels[model]);
 
@@ -140,7 +143,6 @@ const initiateSendMessageStreaming = async () => {
 	}
 
 	saveState();
-	userInput.value = '';
 };
 
 const clearMessages = () => {
