@@ -26,6 +26,7 @@ import ModelSelector from './components/ModelSelector.vue';
 import SettingsDialog from './components/SettingsDialog.vue';
 import { VBtn, VIcon, VSpacer } from 'vuetify/components';
 import LocalDatabaseService from './services/LocalDatabaseService';
+import VSCodeService from './services/VSCodeService';
 
 const messages = reactive({});
 const models = getModels();
@@ -78,11 +79,11 @@ const initiateSendMessageStreaming = async () => {
 		clearMessages();
 	}
 	if (userInput.value.trim() === '') return;
-	const prompt = userInput.value;
+	let prompt = userInput.value;
 	const userMessage = { sender: 'user', text: prompt };
 	const modelsToSend = Object.keys(activeModels).filter(model => activeModels[model]);
 
-	modelsToSend.forEach(async (model) => {
+	for (const model of modelsToSend) {
 		if (!messages[model]) {
 			messages[model] = [];
 		}
@@ -92,11 +93,18 @@ const initiateSendMessageStreaming = async () => {
 		messages[model].push(botMessage);
 		loadingModels[model] = true;
 
-		if (appendCode.value) {
-			// Implement append code functionality if needed
+		if (VSCodeService.IsInVSCode && appendCode.value) {
+			await new Promise((resolve) => {
+				VSCodeService.getData('generatePrompt', null, (response) => {
+					if (response.code) {
+						prompt = response.code + '\n' + prompt;
+					}
+					resolve();
+				});
+			});
 		}
 
-		let simpleMessage = true; // Assuming simpleMessage is defined somewhere
+		let simpleMessage = true;
 		if (simpleMessage) {
 			try {
 				await sendSimpleMessage(prompt, model, (response) => {
@@ -129,7 +137,7 @@ const initiateSendMessageStreaming = async () => {
 				saveState();
 			});
 		}
-	});
+	}
 
 	saveState();
 	userInput.value = '';
