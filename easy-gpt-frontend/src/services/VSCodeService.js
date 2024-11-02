@@ -23,19 +23,32 @@ class VSCodeService {
 		}
 	}
 
+	postData(type, data, callback, timeout = 1000) {
+		const id = this._generateId();
+		this.pendingCallbacks[id] = callback;
+		this.sendData({ id, type, data });
+		setTimeout(() => {
+			if (this.pendingCallbacks[id]) {
+				var error = new Error('Request timed out');
+				error.success = false;
+				this.pendingCallbacks[id](error);
+				delete this.pendingCallbacks[id];
+			}
+		}, timeout);
+	}
+
 	onMessage(callback) {
 		this.listeners.push(callback);
 	}
 
-	getData(type, stringData, callback) {
-		const id = this._generateId();
-		this.pendingCallbacks[id] = callback;
-		this.sendData({ id, type, stringData });
+	getData(type, callback) {
+		this.postData(type, '', callback);
 	}
 
 	_handleMessage(event) {
 		const message = event.data;
 		if (message.id && this.pendingCallbacks[message.id]) {
+			message.success = true;
 			this.pendingCallbacks[message.id](message);
 			delete this.pendingCallbacks[message.id];
 		} else {

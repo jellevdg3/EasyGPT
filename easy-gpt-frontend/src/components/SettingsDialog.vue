@@ -13,6 +13,8 @@
 					@update:model-value="updatePlaySoundLocal"></v-switch>
 				<v-switch label="Clear chat on every new request" :model-value="localClearChat"
 					@update:model-value="updateClearChatLocal"></v-switch>
+				<v-switch label="Prefix prompt automatically" :model-value="localPrefixWithPrompt"
+					@update:model-value="updatePrefixWithPromptLocal"></v-switch>
 			</v-card-text>
 			<v-card-actions>
 				<v-spacer></v-spacer>
@@ -42,14 +44,19 @@ const props = defineProps({
 	clearChat: {
 		type: Boolean,
 		default: false
+	},
+	prefixWithPrompt: {
+		type: Boolean,
+		default: false
 	}
 });
 
-const emit = defineEmits(['update:modelValue', 'update:appendCode', 'update:playSound', 'update:clearChat']);
+const emit = defineEmits(['update:modelValue', 'update:appendCode', 'update:playSound', 'update:clearChat', 'update:prefixWithPrompt']);
 
 const localAppendCode = ref(props.appendCode);
 const localPlaySound = ref(props.playSound);
 const localClearChat = ref(props.clearChat);
+const localPrefixWithPrompt = ref(props.prefixWithPrompt);
 
 watch(() => props.appendCode, (newVal) => {
 	localAppendCode.value = newVal;
@@ -61,6 +68,10 @@ watch(() => props.playSound, (newVal) => {
 
 watch(() => props.clearChat, (newVal) => {
 	localClearChat.value = newVal;
+});
+
+watch(() => props.prefixWithPrompt, (newVal) => {
+	localPrefixWithPrompt.value = newVal;
 });
 
 const updateAppendCodeLocal = (val) => {
@@ -76,6 +87,11 @@ const updatePlaySoundLocal = (val) => {
 const updateClearChatLocal = (val) => {
 	localClearChat.value = val;
 	emit('update:clearChat', val);
+};
+
+const updatePrefixWithPromptLocal = (val) => {
+	localPrefixWithPrompt.value = val;
+	emit('update:prefixWithPrompt', val);
 };
 
 const close = () => {

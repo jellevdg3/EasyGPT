@@ -2,10 +2,20 @@
 	<div :class="['message', message.sender]">
 		<div v-if="hasMessage()">
 			<span class="message-text" v-html="formatMessage(message.text)"></span>
-			<v-btn icon tile size="x-small" @click="copyMessage" class="menu-button elevation-0"
-				style="background-color: transparent;">
-				<v-icon color="white">mdi-content-copy</v-icon>
-			</v-btn>
+			<div class="button-group">
+				<v-btn v-if="VSCodeService.IsInVSCode" icon tile size="x-small" @click="writeCode"
+					class="menu-button elevation-0" style="background-color: transparent; right: 48px;">
+					<v-icon color="white">mdi-check-bold</v-icon>
+				</v-btn>
+				<v-btn icon tile size="x-small" @click="copyText" class="menu-button elevation-0"
+					style="background-color: transparent; right: 24px;">
+					<v-icon color="white">mdi-content-copy</v-icon>
+				</v-btn>
+				<v-btn icon tile size="x-small" @click="copyMessage" class="menu-button elevation-0"
+					style="background-color: transparent;">
+					<v-icon color="white">mdi-code-block-parentheses</v-icon>
+				</v-btn>
+			</div>
 		</div>
 		<div v-else class="typing">
 			<span></span><span></span><span></span>
@@ -14,20 +24,33 @@
 </template>
 
 <script setup>
-import { marked } from 'marked'
+import { marked } from 'marked';
+import VSCodeService from '../services/VSCodeService';
 
 const props = defineProps({
 	message: Object
-})
+});
 
 const formatMessage = (text) => {
-	return marked.parse(text)
+	return marked.parse(text);
 }
 
-const hasMessage = () => props.message.text && props.message.text !== ''
+const hasMessage = () => props.message.text && props.message.text !== '';
 
 const copyMessage = () => {
-	navigator.clipboard.writeText(props.message.text)
+	navigator.clipboard.writeText(props.message.text);
+}
+
+const writeCode = () => {
+	VSCodeService.postData('writeCode', props.message.text);
+}
+
+const copyText = () => {
+	const formattedHtml = formatMessage(props.message.text);
+	const tempElement = document.createElement('div');
+	tempElement.innerHTML = formattedHtml;
+	const plainText = tempElement.innerText;
+	navigator.clipboard.writeText(plainText);
 }
 </script>
 
@@ -122,5 +145,10 @@ ol {
 	right: 0px;
 	padding: 0px;
 	margin: 0px;
+}
+
+.button-group {
+	display: flex;
+	gap: 4px;
 }
 </style>

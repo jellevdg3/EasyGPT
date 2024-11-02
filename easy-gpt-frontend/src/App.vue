@@ -11,8 +11,9 @@
 		<MessageContainer :messages="currentModel ? messages[currentModel] : []" />
 		<InputContainer v-model="userInput" @send="initiateSendMessageStreaming" @clear="clearMessages" />
 		<SettingsDialog v-model="settingsDialog" :appendCode="appendCode" :playSound="playSound" :clearChat="clearChat"
+			:prefixWithPrompt="prefixWithPrompt"
 			@update:appendCode="updateAppendCode" @update:playSound="updatePlaySound"
-			@update:clearChat="updateClearChat" />
+			@update:clearChat="updateClearChat" @update:prefixWithPrompt="updatePrefixWithPrompt" />
 	</div>
 </template>
 
@@ -40,6 +41,7 @@ const panelId = ref(null);
 const appendCode = ref(false);
 const playSound = ref(true);
 const clearChat = ref(true);
+const prefixWithPrompt = ref(false);
 
 const settingsDialog = ref(false);
 
@@ -74,6 +76,11 @@ const updateClearChat = (val) => {
 	saveSettings();
 };
 
+const updatePrefixWithPrompt = (val) => {
+	prefixWithPrompt.value = val;
+	saveSettings();
+};
+
 const handleSendSimpleMessage = async (model, prompt, botMessage) => {
 	try {
 		await sendSimpleMessage(prompt, model, (response) => {
@@ -89,30 +96,30 @@ const handleSendSimpleMessage = async (model, prompt, botMessage) => {
 
 const handleSendStreamingMessage = async (model, prompt, botMessage) => {
 	try {
-		await sendSimpleMessage(prompt, model, (message) => {
-				if (message.startsWith('data: ')) {
-					message = message.substring(6);
-				}
+		await sendMessageStreaming(prompt, model, (message) => {
+			if (message.startsWith('data: ')) {
+				message = message.substring(6);
+			}
 
-				if (message === '[DONE]') {
-					loadingModels[model] = false;
-					saveState();
-					return;
-				}
-
-				botMessage.text += message;
-				saveState();
-			}, playSound.value).catch(error => {
-				botMessage.text = 'Error: ' + (error.message || 'Unknown error');
+			if (message === '[DONE]') {
 				loadingModels[model] = false;
 				saveState();
-			});
-		}
-		catch (error) {
+				return;
+			}
+
+			botMessage.text += message;
+			saveState();
+		}, playSound.value).catch(error => {
 			botMessage.text = 'Error: ' + (error.message || 'Unknown error');
 			loadingModels[model] = false;
 			saveState();
-		}
+		});
+	}
+	catch (error) {
+		botMessage.text = 'Error: ' + (error.message || 'Unknown error');
+		loadingModels[model] = false;
+		saveState();
+	}
 };
 
 const initiateSendMessageStreaming = async () => {
@@ -139,7 +146,7 @@ const initiateSendMessageStreaming = async () => {
 
 		if (VSCodeService.IsInVSCode && appendCode.value) {
 			await new Promise((resolve) => {
-				VSCodeService.getData('generatePrompt', null, (response) => {
+				VSCodeService.postData('generatePrompt', { prefixWithPrompt: prefixWithPrompt.value }, (response) => {
 					if (response.code) {
 						prompt = response.code + '\n' + prompt;
 					}
@@ -191,6 +198,7 @@ const loadState = () => {
 		appendCode.value = savedSettings.appendCode;
 		playSound.value = savedSettings.playSound;
 		clearChat.value = savedSettings.clearChat;
+		prefixWithPrompt.value = savedSettings.prefixWithPrompt;
 	}
 };
 
@@ -198,7 +206,8 @@ const saveSettings = () => {
 	LocalDatabaseService.saveData(`settings`, {
 		appendCode: appendCode.value,
 		playSound: playSound.value,
-		clearChat: clearChat.value
+		clearChat: clearChat.value,
+		prefixWithPrompt: prefixWithPrompt.value
 	});
 };
 
