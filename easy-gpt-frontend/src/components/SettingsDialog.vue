@@ -7,14 +7,14 @@
 				<v-spacer></v-spacer>
 			</v-card-title>
 			<v-card-text class="text-white">
+				<v-switch label="Prefix prompt automatically" :model-value="localPrefixWithPrompt"
+					@update:model-value="updatePrefixWithPromptLocal"></v-switch>
 				<v-switch label="Append code automatically" :model-value="localAppendCode"
 					@update:model-value="updateAppendCodeLocal"></v-switch>
 				<v-switch label="Play sound upon completion" :model-value="localPlaySound"
 					@update:model-value="updatePlaySoundLocal"></v-switch>
 				<v-switch label="Clear chat on every new request" :model-value="localClearChat"
 					@update:model-value="updateClearChatLocal"></v-switch>
-				<v-switch label="Prefix prompt automatically" :model-value="localPrefixWithPrompt"
-					@update:model-value="updatePrefixWithPromptLocal"></v-switch>
 			</v-card-text>
 			<v-card-actions>
 				<v-spacer></v-spacer>

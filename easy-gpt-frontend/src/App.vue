@@ -11,9 +11,9 @@
 		<MessageContainer :messages="currentModel ? messages[currentModel] : []" />
 		<InputContainer v-model="userInput" @send="initiateSendMessageStreaming" @clear="clearMessages" />
 		<SettingsDialog v-model="settingsDialog" :appendCode="appendCode" :playSound="playSound" :clearChat="clearChat"
-			:prefixWithPrompt="prefixWithPrompt"
-			@update:appendCode="updateAppendCode" @update:playSound="updatePlaySound"
-			@update:clearChat="updateClearChat" @update:prefixWithPrompt="updatePrefixWithPrompt" />
+			:prefixWithPrompt="prefixWithPrompt" @update:appendCode="updateAppendCode"
+			@update:playSound="updatePlaySound" @update:clearChat="updateClearChat"
+			@update:prefixWithPrompt="updatePrefixWithPrompt" />
 	</div>
 </template>
 
@@ -38,10 +38,10 @@ const currentModel = ref(models[0].id);
 const userInput = ref('');
 const panelId = ref(null);
 
-const appendCode = ref(false);
+const prefixWithPrompt = ref(true);
+const appendCode = ref(true);
 const playSound = ref(true);
 const clearChat = ref(true);
-const prefixWithPrompt = ref(false);
 
 const settingsDialog = ref(false);
 
@@ -129,6 +129,18 @@ const initiateSendMessageStreaming = async () => {
 	if (userInput.value.trim() === '') return;
 
 	let prompt = userInput.value;
+
+	if (VSCodeService.IsInVSCode && appendCode.value) {
+		await new Promise((resolve) => {
+			VSCodeService.postData('generatePrompt', { prefixWithPrompt: prefixWithPrompt.value }, (response) => {
+				if (response.code) {
+					prompt = response.code + '\n' + prompt;
+				}
+				resolve();
+			});
+		});
+	}
+
 	userInput.value = '';
 
 	const userMessage = { sender: 'user', text: prompt };
@@ -143,17 +155,6 @@ const initiateSendMessageStreaming = async () => {
 		const botMessage = reactive({ sender: 'bot', text: '' });
 		messages[model].push(botMessage);
 		loadingModels[model] = true;
-
-		if (VSCodeService.IsInVSCode && appendCode.value) {
-			await new Promise((resolve) => {
-				VSCodeService.postData('generatePrompt', { prefixWithPrompt: prefixWithPrompt.value }, (response) => {
-					if (response.code) {
-						prompt = response.code + '\n' + prompt;
-					}
-					resolve();
-				});
-			});
-		}
 
 		let simpleMessage = true;
 		if (simpleMessage) {
