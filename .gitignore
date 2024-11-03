@@ -130,3 +130,4 @@ dist
 .pnp.*
 easy-gpt-frontend/package-lock.json
 easy-gpt-backend/cache
+easy-gpt-backend/package-lock.json

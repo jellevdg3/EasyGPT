@@ -58,6 +58,10 @@ const copyText = () => {
 ol {
 	padding: 0em 1em !important;
 }
+
+ul {
+	padding: 0em 1em !important;
+}
 </style>
 
 <style scoped>
